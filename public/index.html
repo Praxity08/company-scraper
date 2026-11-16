@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Company Scraper</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e3e3de;
+    --accent: #2f5bea; --ok: #1f7a4d; --ok-bg: #e6f4ec; --warn: #9a5b00; --warn-bg: #fdf1dc;
+    --bad: #b42318; --bad-bg: #fde8e6; --chip: #f0f0ec; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615; --card: #1f1f1d; --text: #ececea; --muted: #a0a09a; --line: #34342f;
+      --accent: #7c9cff; --ok: #6fd3a0; --ok-bg: #173527; --warn: #f0b860; --warn-bg: #3a2b12;
+      --bad: #ff8a80; --bad-bg: #3d1a17; --chip: #2a2a27;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  label { font-weight: 600; display: block; margin-bottom: 6px; }
+  textarea { width: 100%; min-height: 110px; padding: 10px; border-radius: 8px; border: 1px solid var(--line);
+             background: var(--bg); color: var(--text); font: 14px/1.5 var(--mono); resize: vertical; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  button { font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--accent);
+           background: var(--accent); color: #fff; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  .hint { color: var(--muted); font-size: 13px; }
+  #progress { margin: 20px 0 8px; color: var(--muted); min-height: 1.5em; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 14px; }
+  .head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .domain { font-size: 18px; font-weight: 700; }
+  .badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .03em; }
+  .b-ok { background: var(--ok-bg); color: var(--ok); }
+  .b-warn { background: var(--warn-bg); color: var(--warn); }
+  .b-bad { background: var(--bad-bg); color: var(--bad); }
+  .meta { color: var(--muted); font-size: 13px; margin: 4px 0 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .chip { font-size: 13px; padding: 2px 9px; border-radius: 999px; background: var(--chip); }
+  .chip.found { background: var(--ok-bg); color: var(--ok); }
+  .chip.missing { color: var(--muted); text-decoration: line-through; }
+  details { border-top: 1px solid var(--line); padding: 8px 0; }
+  summary { cursor: pointer; overflow-wrap: anywhere; }
+  summary .t { font-weight: 600; }
+  summary .u { color: var(--muted); font-size: 13px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--line);
+        border-radius: 8px; padding: 10px; max-height: 360px; overflow: auto; font: 12.5px/1.5 var(--mono); margin: 8px 0 0; }
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent);
+             border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  footer { margin-top: 32px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Company Scraper</h1>
+  <p class="sub">Reads a company's own website and pulls out its homepage, pricing, about, careers, security, customers and press pages.</p>
+
+  <div class="panel">
+    <label for="domains">Domains (up to 5, one per line or separated by commas)</label>
+    <textarea id="domains" placeholder="example.com&#10;another-company.io" spellcheck="false"></textarea>
+    <div class="row">
+      <button id="go">Scrape</button>
+      <button id="download" class="ghost" disabled>Download JSON</button>
+      <span class="hint">About 15–25 seconds per domain. Polite: 1–2 s pause between requests, robots.txt respected.</span>
+    </div>
+  </div>
+
+  <div id="progress" aria-live="polite"></div>
+  <div id="results"></div>
+
+  <footer>Nothing is saved on the server. LinkedIn is never visited. Companies on the do-not-contact list are skipped.</footer>
+</main>
+
+<script>
+const MAX_DOMAINS = 5;
+const PAGE_TYPES = ["homepage", "pricing", "about", "careers", "security", "customers", "press"];
+const $ = (id) => document.getElementById(id);
+let results = [];
+
+function el(tag, attrs = {}, ...children) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  for (const c of children) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return n;
+}
+
+function parseDomains(text) {
+  const seen = new Set();
+  return text.split(/[\s,;]+/).map(s => s.trim()).filter(s => s && !seen.has(s.toLowerCase()) && seen.add(s.toLowerCase()));
+}
+
+function badge(r) {
+  if (r.error) return el("span", { class: "badge b-bad" }, "error");
+  if (r.status === "skipped") return el("span", { class: "badge b-warn" }, "skipped");
+  if (r.status === "unreadable") return el("span", { class: "badge b-bad" }, "unreadable");
+  if (r.ran_out_of_time) return el("span", { class: "badge b-warn" }, "partial (out of time)");
+  return el("span", { class: "badge b-ok" }, "ok");
+}
+
+function renderCard(r) {
+  const card = el("div", { class: "card" },
+    el("div", { class: "head" }, el("span", { class: "domain" }, r.domain || r.input || "?"), badge(r)));
+
+  if (r.error) { card.append(el("div", { class: "meta" }, r.error)); }
+  if (r.status === "skipped") { card.append(el("div", { class: "meta" }, r.reason || "")); return card; }
+  if (!r.pages) return card;
+
+  card.append(el("div", { class: "meta" },
+    `${r.seconds} s · fetches: step A ${r.fetches.step_a}, step B ${r.fetches.step_b} · ${r.robots}`));
+
+  const chips = el("div", { class: "chips" });
+  for (const t of PAGE_TYPES) chips.append(el("span", { class: "chip " + (r.pages[t] ? "found" : "missing") }, t));
+  card.append(chips);
+
+  for (const t of PAGE_TYPES) {
+    const p = r.pages[t];
+    if (!p) continue;
+    const d = el("details", {},
+      el("summary", {}, el("span", { class: "t" }, t), " ",
+        el("span", { class: "u" }, `${p.url} · ${p.chars.toLocaleString()} chars · found by ${p.found_by}`)),
+      el("pre", {}, p.text || "(empty: page may need JavaScript)"));
+    card.append(d);
+  }
+  if (r.log && r.log.length) {
+    card.append(el("details", {}, el("summary", {}, el("span", { class: "u" }, "Run log")), el("pre", {}, r.log.join("\n"))));
+  }
+  return card;
+}
+
+async function scrapeOne(domain) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 130000);
+  try {
+    const res = await fetch("/api/scrape", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
+      body: JSON.stringify({ domain }),
+      signal: ctrl.signal,
+    });
+    let data;
+    try { data = await res.json(); } catch { data = { error: `Server error (HTTP ${res.status})` }; }
+    if (!res.ok && !data.error) data.error = `HTTP ${res.status}`;
+    if (!data.domain) data.input = domain;
+    return data;
+  } catch (e) {
+    return { input: domain, error: e.name === "AbortError" ? "Took too long (over 130 s)" : "Network error" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+$("go").addEventListener("click", async () => {
+  const domains = parseDomains($("domains").value);
+  if (!domains.length) { $("progress").textContent = "Type at least one domain."; return; }
+  if (domains.length > MAX_DOMAINS) {
+    $("progress").textContent = `Please enter at most ${MAX_DOMAINS} domains (you entered ${domains.length}).`;
+    return;
+  }
+  $("go").disabled = true; $("download").disabled = true;
+  $("results").replaceChildren(); results = [];
+  for (let i = 0; i < domains.length; i++) {
+    $("progress").replaceChildren(el("span", { class: "spinner" }), `Scraping ${i + 1} of ${domains.length}: ${domains[i]} …`);
+    const r = await scrapeOne(domains[i]);
+    results.push(r);
+    $("results").append(renderCard(r));
+  }
+  $("progress").textContent = `Done: ${domains.length} domain${domains.length > 1 ? "s" : ""}.`;
+  $("go").disabled = false; $("download").disabled = false;
+});
+
+$("download").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(results, null, 2)], { type: "application/json" });
+  const a = el("a", { href: URL.createObjectURL(blob), download: `scrape-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json` });
+  document.body.append(a); a.click(); a.remove();
+});
+</script>
+</body>
+</html>

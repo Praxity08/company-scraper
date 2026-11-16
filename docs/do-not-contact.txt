@@ -1,0 +1,7 @@
+# Companies never to scrape or contact. One name or domain per line.
+# A name matches a domain's first part (e.g. Whatfix matches whatfix.com).
+Whatfix
+Bizongo
+Happay
+Turtlemint
+Rocketlane

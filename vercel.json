@@ -1,0 +1,9 @@
+{
+  "regions": ["sin1"],
+  "functions": {
+    "api/scrape.py": {
+      "maxDuration": 120,
+      "includeFiles": "{scraper.py,docs/do-not-contact.txt}"
+    }
+  }
+}
