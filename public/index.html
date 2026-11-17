@@ -4,204 +4,432 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Company Scraper</title>
+<title>ProspectIQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+  // theme choice before first paint (no flash)
+  try { const t = localStorage.getItem("piq-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 <style>
   :root {
-    --bg: #f7f7f5; --card: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e3e3de;
-    --accent: #2f5bea; --ok: #1f7a4d; --ok-bg: #e6f4ec; --warn: #9a5b00; --warn-bg: #fdf1dc;
-    --bad: #b42318; --bad-bg: #fde8e6; --chip: #f0f0ec; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    --bg: #F7F6F3; --surface: #FFFFFF; --ink: #17171A; --muted: #6B6B73; --faint: #9C9CA4;
+    --line: #E8E6E1; --line2: #D6D3CC; --soft: #F3F1ED; --accent: #17171A; --accent-ink: #FFFFFF;
+    --go-bg: #E4F1E8; --go-ink: #1F5E3A; --flag-bg: #F7ECD6; --flag-ink: #7A5410;
+    --nogo-bg: #F6E3E3; --nogo-ink: #8C2B2B; --info-bg: #E6EBF6; --info-ink: #2C4A80;
+    --test-bg: #ECE6F6; --test-ink: #5A3D8A; --neutral-bg: #EFEDE8; --neutral-ink: #55555C;
+    --link: #2C4A80; --wash-opacity: .30; --wash-blend: normal;
+    --r: 12px; --rb: 8px;
+    --sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #161615; --card: #1f1f1d; --text: #ececea; --muted: #a0a09a; --line: #34342f;
-      --accent: #7c9cff; --ok: #6fd3a0; --ok-bg: #173527; --warn: #f0b860; --warn-bg: #3a2b12;
-      --bad: #ff8a80; --bad-bg: #3d1a17; --chip: #2a2a27;
+    :root:not([data-theme="light"]) {
+      --bg: #0F0F11; --surface: #17171A; --ink: #EDEDEF; --muted: #9A9AA3; --faint: #66666E;
+      --line: #26262B; --line2: #36363C; --soft: #1D1D21; --accent: #EDEDEF; --accent-ink: #111113;
+      --go-bg: rgba(110,200,140,.13); --go-ink: #9BDCB2; --flag-bg: rgba(240,190,90,.13); --flag-ink: #F0CE85;
+      --nogo-bg: rgba(240,120,120,.13); --nogo-ink: #F2A7A7; --info-bg: rgba(120,160,240,.14); --info-ink: #AFC6F5;
+      --test-bg: rgba(170,130,240,.15); --test-ink: #CDB6F5; --neutral-bg: rgba(255,255,255,.06); --neutral-ink: #B5B5BD;
+      --link: #AFC6F5; --wash-opacity: .20; --wash-blend: screen; color-scheme: dark;
     }
   }
+  :root[data-theme="dark"] {
+    --bg: #0F0F11; --surface: #17171A; --ink: #EDEDEF; --muted: #9A9AA3; --faint: #66666E;
+    --line: #26262B; --line2: #36363C; --soft: #1D1D21; --accent: #EDEDEF; --accent-ink: #111113;
+    --go-bg: rgba(110,200,140,.13); --go-ink: #9BDCB2; --flag-bg: rgba(240,190,90,.13); --flag-ink: #F0CE85;
+    --nogo-bg: rgba(240,120,120,.13); --nogo-ink: #F2A7A7; --info-bg: rgba(120,160,240,.14); --info-ink: #AFC6F5;
+    --test-bg: rgba(170,130,240,.15); --test-ink: #CDB6F5; --neutral-bg: rgba(255,255,255,.06); --neutral-ink: #B5B5BD;
+    --link: #AFC6F5; --wash-opacity: .20; --wash-blend: screen; color-scheme: dark;
+  }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
-  h1 { font-size: 24px; margin: 0 0 4px; }
-  h2 { font-size: 17px; margin: 32px 0 8px; }
-  .sub { color: var(--muted); margin: 0 0 8px; }
-  .usage { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
-  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
-  label { font-weight: 600; display: block; margin-bottom: 6px; }
-  textarea { width: 100%; min-height: 110px; padding: 10px; border-radius: 8px; border: 1px solid var(--line);
-             background: var(--bg); color: var(--text); font: 14px/1.5 var(--mono); resize: vertical; }
-  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
-  button { font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--accent);
-           background: var(--accent); color: #fff; cursor: pointer; }
-  button.ghost { background: transparent; color: var(--accent); }
-  button.small { padding: 5px 12px; font-size: 13px; }
-  button:disabled { opacity: .5; cursor: default; }
-  .hint { color: var(--muted); font-size: 13px; }
-  #progress { margin: 20px 0 8px; color: var(--muted); min-height: 1.5em; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 14px; }
-  .head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  .domain { font-size: 18px; font-weight: 700; }
-  .badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .03em; }
-  .b-ok { background: var(--ok-bg); color: var(--ok); }
-  .b-warn { background: var(--warn-bg); color: var(--warn); }
-  .b-bad { background: var(--bad-bg); color: var(--bad); }
-  .meta { color: var(--muted); font-size: 13px; margin: 4px 0 10px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-  .chip { font-size: 13px; padding: 2px 9px; border-radius: 999px; background: var(--chip); }
-  .chip.found { background: var(--ok-bg); color: var(--ok); }
-  .chip.missing { color: var(--muted); text-decoration: line-through; }
-  details { border-top: 1px solid var(--line); padding: 8px 0; }
-  summary { cursor: pointer; overflow-wrap: anywhere; }
-  summary .t { font-weight: 600; }
-  .u { color: var(--muted); font-size: 13px; }
-  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--line);
-        border-radius: 8px; padding: 10px; max-height: 360px; overflow: auto; font: 12.5px/1.5 var(--mono); margin: 8px 0 0; }
-  .contact { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
-  .contact .who { font-weight: 700; }
-  .contact a { color: var(--accent); overflow-wrap: anywhere; }
-  .err { color: var(--bad); font-size: 13px; }
-  label.check { display: flex; gap: 8px; align-items: baseline; font-weight: 600; margin-top: 10px; flex-wrap: wrap; }
-  .step { border-top: 1px solid var(--line); padding: 10px 0 4px; }
-  .step h3 { font-size: 14px; margin: 0 0 6px; }
-  .facts { margin: 0; padding-left: 18px; font-size: 14px; }
-  .facts li { margin: 4px 0; }
-  .quote { color: var(--muted); font-style: italic; }
-  .qrow { margin: 6px 0; font-size: 14px; }
-  .ans { font-weight: 700; text-transform: uppercase; font-size: 12px; padding: 1px 7px; border-radius: 999px; }
-  .ans-yes { background: var(--ok-bg); color: var(--ok); }
-  .ans-no { background: var(--bad-bg); color: var(--bad); }
-  .ans-unknown { background: var(--chip); color: var(--muted); }
-  .status { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 10px 0 4px; font-size: 14px; }
-  .status ul { margin: 4px 0 0; padding-left: 18px; }
-  input.cmd { font: 14px var(--mono); padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line);
-              background: var(--bg); color: var(--text); width: min(100%, 360px); }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-  th { color: var(--muted); font-weight: 600; font-size: 13px; }
-  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 10px; }
-  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent);
-             border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 6px; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 400 14px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .mono { font-family: var(--mono); }
+  .muted { color: var(--muted); }
+  .faint { color: var(--faint); }
+  .label { font: 500 10.5px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
+  .hidden { display: none !important; }
+
+  /* ---------- background washes ---------- */
+  #washes { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+            opacity: var(--wash-opacity); mix-blend-mode: var(--wash-blend); }
+  .wash { position: absolute; left: 0; width: 900px; height: 900px; margin-left: -450px;
+          animation: drift 33s linear infinite; }
+  .wash i { display: block; width: 100%; height: 100%; border-radius: 50%; animation: bob var(--bob) ease-in-out infinite alternate;
+            background: radial-gradient(circle, var(--c) 0%, color-mix(in srgb, var(--c) 40%, transparent) 50%, transparent 70%); }
+  @keyframes drift {
+    0% { transform: translateX(-20vw); opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; }
+    100% { transform: translateX(120vw); opacity: 0; }
+  }
+  @keyframes bob { from { transform: translateY(-60px); } to { transform: translateY(60px); } }
+  @media (prefers-reduced-motion: reduce) {
+    .wash, .wash i { animation: none; }
+    .wash:nth-child(1) { transform: translateX(10vw); } .wash:nth-child(2) { transform: translateX(40vw); }
+    .wash:nth-child(3) { transform: translateX(70vw); } .wash:nth-child(4) { transform: translateX(95vw); }
+  }
+
+  /* ---------- layout ---------- */
+  .app { position: relative; z-index: 1; display: flex; min-height: 100vh; }
+  .sidebar { width: 236px; flex: 0 0 236px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+             background: var(--surface); border-right: 1px solid var(--line); display: flex; flex-direction: column;
+             padding: 20px 14px 16px; gap: 22px; }
+  main { flex: 1 1 auto; min-width: 0; max-width: 1360px; padding: 28px 36px 40px; display: flex; flex-direction: column; gap: 22px; }
+
+  .logo { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
+  .logo b { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+  .menu-btn { display: none; margin-left: auto; }
+  nav { display: flex; flex-direction: column; gap: 2px; }
+  nav button { all: unset; cursor: pointer; display: flex; justify-content: space-between; padding: 7px 10px; border-radius: var(--rb);
+               color: var(--muted); font-size: 13.5px; }
+  nav button:hover { color: var(--ink); }
+  nav button.on { background: var(--soft); color: var(--ink); font-weight: 500; }
+  nav button .n { font: 12px var(--mono); color: var(--faint); }
+  nav button:focus-visible, .co:focus-visible { outline: 2px solid var(--info-ink); outline-offset: 1px; }
+  .side-sec { display: flex; flex-direction: column; gap: 6px; }
+  .side-sec .label { padding: 0 10px; }
+  .co { all: unset; cursor: pointer; display: grid; grid-template-columns: 8px 1fr; gap: 2px 9px; align-items: center;
+        padding: 6px 10px; border-radius: var(--rb); }
+  .co:hover, .co.on { background: var(--soft); }
+  .co .d { font: 12.5px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .co .s { grid-column: 2; font-size: 11.5px; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--line2); flex: none; }
+  .dot.info { background: var(--info-ink); } .dot.flag { background: var(--flag-ink); }
+  .dot.go { background: var(--go-ink); } .dot.nogo { background: var(--nogo-ink); }
+  .side-empty { padding: 0 10px; font-size: 12.5px; color: var(--faint); }
+  .side-bottom { margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding: 0 6px; }
+  .meter .top { display: flex; justify-content: space-between; font-size: 12.5px; }
+  .meter .top span:last-child { font-family: var(--mono); color: var(--muted); }
+  .bar { height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; margin-top: 5px; }
+  .bar i { display: block; height: 100%; background: var(--ink); border-radius: 2px; }
+  .bar.full i { background: var(--nogo-ink); }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: var(--rb); padding: 2px; gap: 2px; }
+  .seg button { all: unset; cursor: pointer; flex: 1; text-align: center; font-size: 12.5px; padding: 4px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+  .seg button.on { background: var(--soft); color: var(--ink); font-weight: 500; }
+  .seg button:focus-visible { outline: 2px solid var(--info-ink); }
+
+  h1 { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin: 0; }
+  .tagline { color: var(--muted); margin: 2px 0 0; font-size: 13.5px; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+  .card-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+               padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .card-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
+  .card-head .sub { font-size: 12.5px; color: var(--muted); }
+
+  /* ---------- buttons, badges, inputs ---------- */
+  .btn { font: 500 13.5px/1 var(--sans); padding: 10px 18px; border-radius: var(--rb); border: 1px solid var(--accent);
+         background: var(--accent); color: var(--accent-ink); cursor: pointer; white-space: nowrap; }
+  .btn:disabled { background: var(--soft); border-color: var(--soft); color: var(--faint); cursor: default; }
+  .btn.sec { background: transparent; color: var(--ink); border-color: var(--line); }
+  .btn.sec:disabled { color: var(--faint); }
+  .btn.small { padding: 7px 12px; font-size: 12.5px; }
+  .btn:focus-visible { outline: 2px solid var(--info-ink); outline-offset: 2px; }
+  .tert { all: unset; cursor: pointer; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; font-size: 12.5px; }
+  .tert:hover { color: var(--ink); }
+  .tert:focus-visible { outline: 2px solid var(--info-ink); }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 3px 8px;
+           border-radius: var(--rb); white-space: nowrap; line-height: 1.3; }
+  .badge.caps { font: 500 10.5px/1.4 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+  .b-go { background: var(--go-bg); color: var(--go-ink); } .b-flag { background: var(--flag-bg); color: var(--flag-ink); }
+  .b-nogo { background: var(--nogo-bg); color: var(--nogo-ink); } .b-info { background: var(--info-bg); color: var(--info-ink); }
+  .b-test { background: var(--test-bg); color: var(--test-ink); } .b-neutral { background: var(--neutral-bg); color: var(--neutral-ink); }
+  input.text { font: 13.5px var(--mono); padding: 9px 12px; border-radius: var(--rb); border: 1px solid var(--line);
+               background: var(--bg); color: var(--ink); min-width: 0; }
+  input.text:focus { outline: none; border-color: var(--ink); }
+  input.text.ok { border-color: var(--go-ink); }
+  .err { color: var(--nogo-ink); font-size: 13px; }
+  .spin { display: inline-block; width: 11px; height: 11px; border: 2px solid currentColor; border-right-color: transparent;
+          border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 6px; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  footer { margin-top: 32px; color: var(--muted); font-size: 13px; }
+
+  /* ---------- new run ---------- */
+  .newrun { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .newrun .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .newrun input.text { flex: 1 1 320px; }
+  .switch { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 500;
+            padding: 6px 10px; border-radius: var(--rb); border: 1px solid var(--line); }
+  .switch .track { width: 30px; height: 18px; border-radius: 9px; background: var(--line2); position: relative; transition: background .15s; }
+  .switch .knob { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); transition: left .15s; }
+  .switch[aria-checked="true"] { background: var(--test-bg); color: var(--test-ink); border-color: transparent; }
+  .switch[aria-checked="true"] .track { background: var(--test-ink); }
+  .switch[aria-checked="true"] .knob { left: 14px; }
+  .switch[aria-disabled="true"] { opacity: .6; cursor: default; }
+  .switch:focus-visible { outline: 2px solid var(--info-ink); }
+  .hintline { font-size: 12.5px; color: var(--muted); display: flex; gap: 6px 14px; flex-wrap: wrap; }
+  .banner { padding: 12px 16px; border-radius: var(--r); font-size: 13.5px; }
+
+  /* ---------- tables ---------- */
+  .tscroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .run-table { min-width: 1000px; }
+  .rec-table { min-width: 760px; }
+  th { font: 500 10.5px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--faint);
+       text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr.click { cursor: pointer; }
+  tbody tr.click:hover td { background: color-mix(in srgb, var(--soft) 60%, transparent); }
+  tbody tr.sel td { background: var(--soft); }
+  .dom { font: 500 13px var(--mono); }
+  .cell-co { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .prog { display: flex; gap: 3px; min-width: 120px; }
+  .prog i { flex: 1; height: 6px; border-radius: 2px; background: var(--line); }
+  .prog i.done { background: var(--ink); }
+  .prog i.current { background: transparent; box-shadow: inset 0 0 0 1px var(--ink); }
+  .prog i.running { background: var(--info-ink); }
+  .prog i.stopped { background: var(--nogo-ink); }
+  .prog i.unreach { background: transparent; border: 1px dashed var(--line2); }
+
+  /* ---------- workspace ---------- */
+  .workspace { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+  .rail { flex: 1 1 250px; max-width: 320px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .panel { flex: 999 1 560px; min-width: 0; }
+  .rail-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .rail-head .dom { font-size: 14px; }
+  .steps { display: flex; flex-direction: column; }
+  .st { all: unset; cursor: pointer; display: grid; grid-template-columns: 22px 1fr; gap: 0 11px; padding: 7px 8px; border-radius: var(--rb); }
+  .st:hover { background: var(--soft); }
+  .st.view { background: var(--soft); }
+  .st:focus-visible { outline: 2px solid var(--info-ink); }
+  .st .c { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 500 11px var(--mono);
+           border: 1px solid var(--line2); color: var(--faint); grid-row: span 2; box-sizing: border-box; }
+  .st .t { font-size: 13.5px; font-weight: 500; }
+  .st .u { font-size: 11.5px; color: var(--faint); }
+  .st.done .c { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+  .st.current .c, .st.running .c { border-color: var(--ink); color: var(--ink); }
+  .st.current .u, .st.running .u { color: var(--info-ink); }
+  .st.current.approval .u { color: var(--flag-ink); }
+  .st.stopped .c { background: var(--nogo-bg); border-color: var(--nogo-ink); color: var(--nogo-ink); }
+  .st.stopped .u { color: var(--nogo-ink); }
+  .st.waiting .t, .st.unreach .t { color: var(--muted); }
+  .st.unreach .c { border-style: dashed; }
+  .statusbox { background: var(--soft); border-radius: var(--rb); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .statusbox .s { font-weight: 500; }
+  .statusbox .n { font-size: 13px; color: var(--muted); }
+
+  .phead { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+  .phead h3 { font-size: 24px; font-weight: 600; letter-spacing: -.02em; margin: 2px 0 2px; }
+  .phead .desc { color: var(--muted); font-size: 13.5px; max-width: 560px; }
+  .act { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
+  .act .cost { font-size: 12px; color: var(--muted); max-width: 280px; }
+  .pill { font-size: 12.5px; padding: 6px 12px; border-radius: 999px; border: 1px dashed var(--line2); color: var(--muted); max-width: 320px; text-align: left; }
+  .pill.done { border: none; background: var(--go-bg); color: var(--go-ink); font-weight: 500; }
+  .pill.flag { border: 1px solid var(--flag-ink); color: var(--flag-ink); }
+  .running-strip { padding: 12px 22px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+  .running-strip .row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+  .running-strip .row .mono { color: var(--muted); font-size: 12px; }
+  .running-strip .bar { margin-top: 0; }
+  .running-strip .bar i { transition: width 1s linear; }
+  .pbody { padding: 18px 22px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .soft { background: var(--soft); border-radius: var(--rb); padding: 12px 14px; font-size: 13.5px; }
+  .errblock { background: var(--nogo-bg); color: var(--nogo-ink); border-radius: var(--rb); padding: 12px 14px; font-size: 13.5px; }
+  .errblock b { display: block; margin-bottom: 2px; }
+
+  .ev { font-size: 13px; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; }
+  .ev i { font-style: italic; }
+  .ev a { font: 12px var(--mono); }
+  .tag { font: 500 10.5px var(--mono); letter-spacing: .04em; padding: 1px 6px; border-radius: 5px; background: var(--neutral-bg); color: var(--neutral-ink); margin-left: 4px; }
+  .tag.nogo { background: var(--nogo-bg); color: var(--nogo-ink); }
+
+  .pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .pg { all: unset; display: flex; flex-direction: column; gap: 3px; padding: 11px 13px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .pg.found { cursor: pointer; }
+  .pg.found:hover, .pg.on { background: var(--soft); }
+  .pg:focus-visible { outline: 2px solid var(--info-ink); }
+  .pg .nm { display: flex; align-items: center; gap: 8px; font-weight: 500; text-transform: capitalize; }
+  .pg .why { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+  .dot.hollow { background: transparent; border: 1px solid var(--line2); }
+  .reader { border: 1px solid var(--line); border-radius: var(--rb); padding: 14px 16px; max-height: 460px; overflow: auto; font-size: 13.5px; }
+  .reader .rh { font-weight: 600; margin: 10px 0 2px; }
+  .reader p { margin: 2px 0; color: var(--muted); }
+
+  .facts { display: flex; flex-direction: column; }
+  .fact { display: grid; grid-template-columns: 150px 1fr; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .fact:first-child { padding-top: 0; }
+  .fact .k { color: var(--muted); font-size: 13px; }
+  .fact .v { font-size: 14.5px; font-weight: 500; }
+  @media (max-width: 560px) { .fact { grid-template-columns: 1fr; gap: 2px; } }
+
+  .decision { border-radius: var(--r); padding: 16px 18px; display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  .decision .w { font-size: 30px; font-weight: 600; letter-spacing: -.02em; }
+  .approve { border: 1px solid var(--flag-ink); color: var(--flag-ink); border-radius: var(--rb); padding: 12px 14px;
+             display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13.5px; }
+  .qrow { display: grid; grid-template-columns: 170px 90px 1fr; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); align-items: start; }
+  .qrow .k { font-size: 13px; color: var(--muted); }
+  @media (max-width: 640px) { .qrow { grid-template-columns: 1fr; gap: 4px; } }
+
+  .two { display: flex; flex-wrap: wrap; gap: 22px; }
+  .two > * { flex: 1 1 260px; min-width: 0; }
+  .who { font-size: 28px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; }
+  .rules { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--faint); }
+  .rules li.on { color: var(--ink); font-weight: 500; }
+
+  .paincards { display: flex; gap: 14px; flex-wrap: wrap; }
+  .paincard { flex: 1 1 240px; border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .paincard .p { font-size: 18px; font-weight: 500; letter-spacing: -.01em; line-height: 1.35; }
+
+  .two > .mail { flex: 3 1 340px; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+  .mail .mh { background: var(--soft); padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .mail .subj { font-weight: 600; }
+  .mail .meta { font-size: 12px; color: var(--muted); display: flex; gap: 6px 12px; flex-wrap: wrap; }
+  .mail pre { margin: 0; padding: 16px; white-space: pre-wrap; overflow-wrap: anywhere; font: 14px/1.7 var(--sans); }
+  .two > .hooks { flex: 2 1 240px; display: flex; flex-direction: column; gap: 10px; }
+  .hook { display: grid; grid-template-columns: 22px 1fr; gap: 8px; font-size: 13.5px; }
+  .hook .n { font: 500 12px var(--mono); color: var(--faint); padding-top: 2px; }
+  .rej { font-size: 12.5px; color: var(--muted); }
+
+  .cmd { background: var(--soft); border-radius: var(--rb); padding: 10px 12px; font: 13.5px var(--mono); user-select: none; -webkit-user-select: none; }
+  .sendform { display: flex; flex-direction: column; gap: 10px; }
+  .hintok { color: var(--go-ink); }
+  .preview { border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; font: 12.5px/1.7 var(--mono); color: var(--muted); }
+  .preview div { overflow-wrap: anywhere; }
+
+  .filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .chip { all: unset; cursor: pointer; font-size: 12.5px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .chip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .chip:focus-visible { outline: 2px solid var(--info-ink); }
+  .confirm { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; white-space: nowrap; }
+
+  footer { color: var(--muted); font-size: 12.5px; padding: 6px 2px 0; }
+
+  /* ---------- narrow screens: sidebar becomes a top bar ---------- */
+  @media (max-width: 760px) {
+    .app { flex-direction: column; }
+    .sidebar { width: auto; flex: none; height: auto; position: sticky; top: 0; z-index: 5; border-right: none;
+               border-bottom: 1px solid var(--line); padding: 12px 16px; gap: 14px; max-height: 100vh; }
+    .menu-btn { display: inline-block; }
+    .sidebar:not(.open) .side-collapse { display: none; }
+    main { padding: 20px 16px 32px; }
+    .phead, .pbody, .running-strip { padding-left: 16px; padding-right: 16px; }
+    .act { align-items: flex-start; text-align: left; }
+    .rail { max-width: none; }
+  }
 </style>
 </head>
 <body>
-<main>
-  <h1>Company Scraper</h1>
-  <p class="sub">Reads a company's own website, builds a quoted picture of the company, decides Go / No-Go / Flag, finds one contact with Hunter, picks pain points and drafts an email that goes only to your own inbox for review.</p>
-  <p class="usage" id="usage">&nbsp;</p>
+<div id="washes" aria-hidden="true">
+  <div class="wash" style="top:-8%;animation-delay:0s"><i style="--c:#F4D35E;--bob:17s"></i></div>
+  <div class="wash" style="top:22%;animation-delay:-8.25s"><i style="--c:#F79650;--bob:13s"></i></div>
+  <div class="wash" style="top:48%;animation-delay:-16.5s"><i style="--c:#F3B6D2;--bob:25s"></i></div>
+  <div class="wash" style="top:70%;animation-delay:-24.75s"><i style="--c:#AFC3EF;--bob:20s"></i></div>
+</div>
 
-  <div class="panel">
-    <label for="domains">Domains (up to 5, one per line or separated by commas)</label>
-    <textarea id="domains" placeholder="example.com&#10;another-company.io" spellcheck="false"></textarea>
-    <label class="check"><input type="checkbox" id="testonly"> TEST ONLY run
-      <span class="hint">(locked to these companies, labelled everywhere, "[TEST ONLY]" in email subjects; lets Hunter run on a No-Go for testing)</span></label>
-    <div class="row">
-      <button id="go">Scrape</button>
-      <button id="download" class="ghost" disabled>Download JSON</button>
-      <span class="hint">About 15–25 seconds per domain. Polite: 1–2 s pause between requests, robots.txt respected.</span>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--ink)"/>
+        <path d="M8 18V8h5.2a3.4 3.4 0 0 1 0 6.8H8" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="18.5" cy="18" r="1.6" fill="var(--surface)"/></svg>
+      <b>ProspectIQ</b>
+      <button class="btn sec small menu-btn" id="menuBtn" aria-expanded="false" aria-controls="sidebar">Menu</button>
     </div>
-  </div>
+    <nav class="side-collapse" id="nav" aria-label="Sections">
+      <button data-sec="sec-new">New run</button>
+      <button data-sec="sec-run">This run <span class="n" id="navRunN">0</span></button>
+      <button data-sec="sec-work">Workspace</button>
+      <button data-sec="sec-recent">Recent runs <span class="n" id="navRecentN">0</span></button>
+    </nav>
+    <div class="side-sec side-collapse">
+      <div class="label">Companies</div>
+      <div id="sideCompanies"><div class="side-empty">No companies yet</div></div>
+    </div>
+    <div class="side-bottom side-collapse">
+      <div class="label">Today · shared</div>
+      <div id="meters"></div>
+      <div class="faint" style="font-size:11.5px">Resets at midnight IST</div>
+      <div class="seg" role="group" aria-label="Theme">
+        <button data-theme-set="light">Light</button><button data-theme-set="dark">Dark</button>
+      </div>
+    </div>
+  </aside>
 
-  <div id="progress" aria-live="polite"></div>
-  <div id="results"></div>
+  <main>
+    <header>
+      <h1>Outreach pipeline</h1>
+      <p class="tagline">Outreach research for Sprinto · nothing is ever sent to a prospect</p>
+    </header>
 
-  <h2>Recent runs</h2>
-  <div id="recent" class="hint">Loading…</div>
+    <div id="dbBanner" class="banner b-nogo hidden">Saving is switched off — nothing is saved and every step after scraping is unavailable.</div>
 
-  <footer>No prospect is ever emailed from this page: drafts go only to your own inbox. LinkedIn is never visited. Companies on the do-not-contact list are skipped.
-    Hunter contacts are deleted after 30 days.</footer>
-</main>
+    <section id="sec-new" class="card newrun" aria-label="New run">
+      <div class="row">
+        <input class="text" id="domains" type="text" spellcheck="false" autocomplete="off"
+               placeholder="Add up to 5 websites, separated by commas" aria-label="Websites">
+        <button class="switch" id="testSwitch" role="switch" aria-checked="false">
+          <span class="track"><span class="knob"></span></span> TEST ONLY run</button>
+        <button class="btn" id="go">Scrape</button>
+      </div>
+      <div class="hintline">
+        <span id="countHint">0 of 5 websites</span>
+        <span>About 20 s per website, one at a time</span>
+        <span>TEST ONLY is locked to these companies and adds “[TEST ONLY]” to the subject</span>
+      </div>
+      <div class="err hidden" id="newErr"></div>
+    </section>
+
+    <section id="sec-run" class="card hidden" aria-label="This run">
+      <div class="card-head">
+        <h2 id="runTitle">This run</h2>
+        <button class="btn sec small" id="download">Download JSON</button>
+      </div>
+      <div class="tscroll"><table class="run-table">
+        <thead><tr><th>Company</th><th>Website</th><th>Decision</th><th>Progress</th><th>Status</th><th>Next</th></tr></thead>
+        <tbody id="runBody"></tbody>
+      </table></div>
+    </section>
+
+    <section id="sec-work" class="workspace hidden" aria-label="Workspace"></section>
+
+    <section id="sec-recent" class="card" aria-label="Recent runs">
+      <div class="card-head">
+        <div><h2>Recent runs</h2><div class="sub">20 newest from everyone with the link · contacts deleted after 30 days</div></div>
+        <div class="filters">
+          <input class="text" id="recentSearch" type="search" placeholder="Search" aria-label="Search recent runs" style="width:160px;padding:6px 10px;font-size:12.5px">
+          <div id="chips" class="filters"></div>
+        </div>
+      </div>
+      <div class="tscroll"><table class="rec-table">
+        <thead><tr><th>Company</th><th>Saved (IST)</th><th>Decision</th><th>Contact</th><th>Email</th><th></th></tr></thead>
+        <tbody id="recentBody"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
+      </table></div>
+    </section>
+
+    <footer>No logins — everyone with the link sees the same runs. Found contacts are deleted after 30 days.
+      The only email this tool sends goes to your own inbox.</footer>
+  </main>
+</div>
 
 <script>
+"use strict";
 const MAX_DOMAINS = 5;
 const PAGE_TYPES = ["homepage", "pricing", "about", "careers", "security", "customers", "press"];
-const $ = (id) => document.getElementById(id);
-let results = [];
-let usage = null;
-
-function el(tag, attrs = {}, ...children) {
-  const n = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
-  for (const c of children) if (c !== null && c !== undefined) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
-  return n;
-}
-
-async function api(path, body) {
-  const opts = body === undefined ? {} : {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-    body: JSON.stringify(body),
-  };
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 130000);
-  try {
-    const res = await fetch(path, { ...opts, signal: ctrl.signal });
-    let data;
-    try { data = await res.json(); } catch { data = { error: `Server error (HTTP ${res.status})` }; }
-    if (!res.ok && !data.error) data.error = `HTTP ${res.status}`;
-    return data;
-  } catch (e) {
-    return { error: e.name === "AbortError" ? "Took too long (over 130 s)" : "Network error" };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function parseDomains(text) {
-  const seen = new Set();
-  return text.split(/[\s,;]+/).map(s => s.trim()).filter(s => s && !seen.has(s.toLowerCase()) && seen.add(s.toLowerCase()));
-}
-
-function fmtTime(iso) {
-  try { return new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" }) + " IST"; }
-  catch { return iso; }
-}
-
-// ---------------------------------------------------------------- usage line
-async function loadUsage() {
-  const u = await api("/api/usage");
-  usage = u;
-  if (u.error) { $("usage").textContent = "Hunter usage unavailable (" + u.error + ")."; return; }
-  if (!u.database) { $("usage").textContent = "Database not set up: results are not saved and Hunter is off."; return; }
-  const ready = u.hunter_ready ? "" : " · Hunter key not set";
-  $("usage").textContent = `Hunter lookups today: ${u.hunter_used} of ${u.hunter_cap} (India time)${ready}`;
-}
-
-// ---------------------------------------------------------------- cards
-function badge(r) {
-  if (r.error) return el("span", { class: "badge b-bad" }, "error");
-  if (r.status === "skipped") return el("span", { class: "badge b-warn" }, "skipped");
-  if (r.status === "unreadable") return el("span", { class: "badge b-bad" }, "unreadable");
-  if (r.ran_out_of_time) return el("span", { class: "badge b-warn" }, "partial (out of time)");
-  return el("span", { class: "badge b-ok" }, "ok");
-}
-
-function renderContact(box, c) {
-  box.replaceChildren();
-  if (!c) return;
-  if (c.error) { box.append(el("div", { class: "err" }, c.error)); return; }
-  if (c.outcome === "none") {
-    box.append(el("div", {}, el("span", { class: "who" }, "No contact found. "),
-      el("span", { class: "u" }, `Hunter returned ${c.contact?.people_returned ?? 0} people; none had a security, CTO/engineering-head or founder title with a name.`)));
-    return;
-  }
-  const p = c.contact || {};
-  box.append(
-    el("div", {}, el("span", { class: "who" }, p.name), " · ", p.position,
-      p.low_confidence ? el("span", { class: "badge b-warn", style: "margin-left:8px" }, "low confidence") : null),
-    el("div", {}, p.email, el("span", { class: "u" }, ` · confidence ${p.confidence} · email ${p.verification}`)),
-    el("div", { class: "u" }, `Picked by rule ${p.rule} (${p.rule_label}) from ${p.people_returned} people Hunter returned.` +
-      (c.looked_up_at ? ` Looked up ${fmtTime(c.looked_up_at)}.` : "")));
-  if (p.sources && p.sources.length) {
-    const list = el("div", { class: "u" }, "Hunter sources: ");
-    p.sources.forEach((s, i) => { if (i) list.append(", "); list.append(el("a", { href: s, target: "_blank", rel: "noopener noreferrer nofollow" }, s)); });
-    box.append(list);
-  }
-  box.append(el("div", { class: "u" }, "Do not email from here. This is research only."));
-}
-
-// ---------------------------------------------------------------- pipeline steps
+const STEPS = [
+  { key: "scrape", title: "Scrape", desc: "Reads the company's own website and keeps up to 7 key pages." },
+  { key: "picture", title: "Company picture", desc: "AI lists facts from the saved pages. Every quote is checked word for word." },
+  { key: "check", title: "Checks & decision", desc: "Four checks from the Evidence Map decide Go, Flag or No-Go." },
+  { key: "contact", title: "Contact", desc: "Hunter finds one person: security lead first, then CTO, then founder." },
+  { key: "pain", title: "Pain points", desc: "Up to 2 typical challenges for that person's role, from your list." },
+  { key: "draft", title: "Email draft", desc: "AI suggests hooks from the company's pages; code checks them and fills your template." },
+  { key: "send", title: "Send to my inbox", desc: "Sends the draft only to your own inbox, for review." },
+];
+const KEY_INDEX = { scrape: 0, picture: 1, check: 2, approve: 2, contact: 3, pain: 4, draft: 5, send: 6 };
+const NEXT_SHORT = { picture: "Build company picture", check: "Run checks", approve: "Needs approval", contact: "Find contact",
+                     pain: "Pick pain points", draft: "Draft email", send: "Ready to send" };
+const PHASES = {
+  picture: { expect: 30, list: ["Reading the saved pages", "Listing facts", "Checking every quote word for word"] },
+  check: { expect: 60, list: ["Answering the 4 checks", "Searching the web (1 of 2)", "Searching the web (2 of 2)", "Deciding"] },
+  draft: { expect: 30, list: ["Finding hooks", "Checking hooks against the rules", "Filling the template"] },
+  contact: { expect: 6, list: ["Asking Hunter", "Picking the right person"] },
+  pain: { expect: 2, list: ["Picking from your list"] },
+  approve: { expect: 2, list: ["Saving your approval"] },
+  send: { expect: 5, list: ["Sending to your own inbox"] },
+};
 const FIELD_LABELS = {
   company_name: "Name", what_they_do: "What they do", b2b_saas: "B2B SaaS?", funding_stage: "Funding",
   team_size: "Team size", certification_held: "Certification held", certification_in_progress: "Certification in progress",
@@ -209,295 +437,771 @@ const FIELD_LABELS = {
   security_review: "Security reviews", named_customer: "Named customer", country_or_market: "Country / market",
   recent_update: "Recent update",
 };
-const DECISION_CLASS = { "Go": "b-ok", "Flag": "b-warn", "No-Go": "b-bad" };
+const DEC_CLASS = { "Go": "b-go", "Flag": "b-flag", "No-Go": "b-nogo", "Skipped": "b-neutral" };
+const ANS_CLASS = { yes: "b-go", no: "b-nogo", unknown: "b-neutral" };
 
-function quoteLine(e) {
-  return el("div", { class: "u" }, el("span", { class: "quote" }, `“${e.quote}”`), " — ",
-    el("a", { href: e.source_url, target: "_blank", rel: "noopener noreferrer nofollow" }, e.from === "search" ? "search result" : "source"),
-    e.note ? ` · ${e.note}` : "", e.usable_as_hook === false ? " · never used as an email hook" : "");
+const $ = (id) => document.getElementById(id);
+let items = [];          // companies in this run: { r, st, err:{}, running, started, view, input, scraping, ... }
+let sel = 0;
+let usage = null;
+let recent = [];
+let recentFilter = "All";
+let confirmId = null;
+let scrapingNow = false;
+
+// ---------------------------------------------------------------- helpers
+function el(tag, attrs, ...children) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2), v);
+    else if (k === "style" && typeof v === "object") Object.assign(n.style, v);
+    else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of children.flat()) if (c !== null && c !== undefined && c !== false)
+    n.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return n;
+}
+function safeHref(u) { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.href : null; } catch { return null; } }
+function shortUrl(u) { try { const x = new URL(u); return (x.hostname.replace(/^www\./, "") + x.pathname).replace(/\/$/, ""); } catch { return u || ""; } }
+function link(u, text) {
+  const h = safeHref(u);
+  return h ? el("a", { href: h, target: "_blank", rel: "noopener noreferrer nofollow", class: "mono" }, text || shortUrl(u)) : el("span", { class: "mono" }, text || u || "");
+}
+function badge(text, cls, caps) { return el("span", { class: `badge ${cls || "b-neutral"}${caps ? " caps" : ""}` }, text); }
+function testBadge() { return badge("Test only", "b-test", true); }
+function fmtTime(iso, short) {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    return short ? d.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) + " IST"
+                 : d.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" }) + " IST";
+  } catch { return iso; }
+}
+function evLine(e) {
+  return el("div", { class: "ev" }, el("i", {}, `“${e.quote}”`), " · ", link(e.source_url),
+    e.from === "search" ? el("span", { class: "tag" }, "search result") : null,
+    e.usable_as_hook === false ? el("span", { class: "tag nogo" }, "never used as an email hook") : null,
+    e.note ? el("span", { class: "faint" }, ` · ${e.note}`) : null);
+}
+function scrollToSec(id) {
+  const t = $(id); if (!t || t.classList.contains("hidden")) return;
+  window.scrollTo({ top: t.getBoundingClientRect().top + window.scrollY - 16, behavior: "smooth" });
+  closeMenu();
+}
+async function api(path, body, timeoutMs) {
+  const opts = body === undefined ? {} : {
+    method: "POST", headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" }, body: JSON.stringify(body),
+  };
+  const limit = timeoutMs || 130000;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), limit);
+  try {
+    const res = await fetch(path, { ...opts, signal: ctrl.signal });
+    let data;
+    try { data = await res.json(); } catch { data = { error: `Server error (HTTP ${res.status})` }; }
+    if (!res.ok && !data.error) data.error = `HTTP ${res.status}`;
+    data._code = res.status;
+    return data;
+  } catch (e) {
+    return { _code: 0, error: e.name === "AbortError"
+      ? `Took too long (over ${Math.round(limit / 1000)} s). It may still finish: reopen the company from Recent runs in a minute.`
+      : "Network error. Check your connection and try again." };
+  } finally { clearTimeout(timer); }
+}
+function left(used, cap) { return (used === null || used === undefined) ? null : Math.max(0, cap - used); }
+function nameOf(it) { return (it.r && (it.r.domain || it.r.input)) || it.input; }
+function isTest(it) { return it.r ? !!it.r.test_only : !!it.test_only; }
+
+// ---------------------------------------------------------------- the per-company model
+function model(it) {
+  const s = STEPS.map(() => ({ state: "waiting", sub: "Waiting" }));
+  const r = it.r, st = it.st || {}, camp = st.campaign || {};
+  let stop = null, cur = null, approval = false, status, next, dot = "info", stopWhy = "";
+  if (!r) {
+    s[0] = it.scraping ? { state: "running", sub: "Working…" } : { state: "waiting", sub: "Queued" };
+    return { s, cur: 0, stop: null, status: it.scraping ? "Reading the website" : "Waiting in line",
+             next: it.scraping ? "Scraping…" : "Waiting", dot: "info", nextSentence: "" };
+  }
+  const problem = r.error ? "error" : r.status === "skipped" ? "skipped" : r.status === "unreadable" ? "unreadable" : !r.scrape_id ? "unsaved" : null;
+  if (problem) {
+    stop = 0; dot = "nogo";
+    status = { error: "Scrape failed", skipped: "Skipped: on the do-not-contact list", unreadable: "Nothing readable on the website",
+               unsaved: "Not saved, so no further steps" }[problem];
+    next = problem === "skipped" ? "Skipped" : "Stopped";
+    stopWhy = { error: r.error, skipped: r.reason, unreadable: "Nothing readable was found (site down, blocked, or JavaScript-only).",
+                unsaved: r.save_error || "Saving is switched off." }[problem];
+  } else {
+    s[0] = { state: "done", sub: "Done" };
+    const n = st.next || "picture";
+    status = st.status || "Scraped";
+    if (n === "done") {
+      if (camp.sent_at) {
+        for (let i = 1; i < 7; i++) s[i] = { state: "done", sub: "Done" };
+        const ok = camp.send_result && camp.send_result.ok;
+        dot = ok ? "go" : "flag"; next = ok ? "Sent to inbox" : "Check your inbox";
+      } else if (camp.email && camp.email.hooks && !camp.email.hooks.length) {
+        for (let i = 1; i < 5; i++) s[i] = { state: "done", sub: "Done" };
+        stop = 5; next = "No hook"; dot = "nogo"; stopWhy = "No hook found, so no email.";
+      } else {
+        for (let i = 1; i < 3; i++) s[i] = { state: "done", sub: "Done" };
+        stop = 3; next = "No contact"; dot = "nogo"; stopWhy = "No contact found.";
+      }
+    } else {
+      const idx = KEY_INDEX[n];
+      for (let i = 1; i < idx; i++) s[i] = { state: "done", sub: "Done" };
+      if (n === "contact" && camp.decision === "No-Go" && !r.test_only) {
+        stop = 3; next = "No-Go"; dot = "nogo";
+        stopWhy = "No-Go: Hunter will not run (only a TEST ONLY run overrides this).";
+      } else {
+        cur = idx; approval = n === "approve";
+        next = NEXT_SHORT[n] || n; dot = approval ? "flag" : "info";
+      }
+    }
+  }
+  if (stop !== null) {
+    s[stop] = { state: "stopped", sub: "Stopped" };
+    for (let i = stop + 1; i < 7; i++) s[i] = { state: "unreach", sub: "—" };
+  }
+  if (cur !== null) s[cur] = { state: "current", sub: approval ? "Needs your approval" : "Next", approval };
+  if (it.running) { const i = KEY_INDEX[it.running]; s[i] = Object.assign({}, s[i], { state: "running", sub: "Working…" }); }
+  const nextSentence = stop !== null ? (stopWhy || "This company stopped here.") : ((st.next_steps && st.next_steps[0]) || "");
+  return { s, cur, stop, approval, status, next, dot, nextSentence, stopWhy };
 }
 
-function stepButton(card, r, step, label, extra) {
-  const btn = el("button", { class: "small" }, label);
-  btn.addEventListener("click", async () => {
-    btn.disabled = true;
-    btn.replaceChildren(el("span", { class: "spinner" }), "Working…");
-    if (btn.nextSibling && btn.nextSibling.classList && btn.nextSibling.classList.contains("err")) btn.nextSibling.remove();
-    const st = await api("/api/step", Object.assign({ scrape_id: r.scrape_id, step }, extra ? extra() : {}));
-    if (st.error) {
-      btn.disabled = false; btn.textContent = label;
-      btn.after(el("div", { class: "err" }, st.error));
-      return;
-    }
-    card.replaceWith(renderCard(r, st));
-    loadUsage(); loadRecent();
+// ---------------------------------------------------------------- render
+function render() { renderSidebar(); renderRun(); renderWorkspace(); }
+
+function renderSidebar() {
+  $("navRunN").textContent = items.length;
+  const box = $("sideCompanies");
+  box.replaceChildren();
+  if (!items.length) box.append(el("div", { class: "side-empty" }, "No companies yet"));
+  items.forEach((it, i) => {
+    const m = model(it);
+    box.append(el("button", { class: "co" + (i === sel ? " on" : ""), onclick: () => { sel = i; render(); scrollToSec("sec-work"); } },
+      el("span", { class: "dot " + m.dot }), el("span", { class: "d" }, nameOf(it)), el("span", { class: "s" }, it.running ? "Working…" : m.next)));
   });
-  return btn;
+  renderMeters();
 }
 
-function renderSteps(card, r, st) {
-  const camp = st.campaign || {};
-  const box = el("div");
-  if (st.status) {
-    const s = el("div", { class: "status" }, el("strong", {}, "Status: "), st.status);
-    if (st.next_steps && st.next_steps.length) s.append(el("ul", {}, ...st.next_steps.map(t => el("li", {}, t))));
-    box.append(s);
+function renderMeters() {
+  const box = $("meters");
+  box.replaceChildren();
+  const u = usage || {};
+  const rows = [["Hunter", u.hunter_used, u.hunter_cap ?? 2], ["AI steps", u.ai_used, u.ai_cap ?? 50], ["Inbox sends", u.send_used, u.send_cap ?? 3]];
+  for (const [label, used, cap] of rows) {
+    const known = used !== null && used !== undefined;
+    const pct = known ? Math.min(100, (used / cap) * 100) : 0;
+    box.append(el("div", { class: "meter", style: { marginBottom: "8px" } },
+      el("div", { class: "top" }, el("span", {}, label), el("span", {}, known ? `${used}/${cap}` : `–/${cap}`)),
+      el("div", { class: "bar" + (known && used >= cap ? " full" : "") }, el("i", { style: { width: pct + "%" } }))));
   }
-
-  // Company picture
-  const p = el("div", { class: "step" }, el("h3", {}, "1 · Company picture"));
-  if (camp.picture) {
-    const list = el("ul", { class: "facts" });
-    for (const f of camp.picture.facts) {
-      list.append(el("li", {}, el("strong", {}, (FIELD_LABELS[f.field] || f.field) + ": "), f.value, quoteLine(f)));
-    }
-    if (!camp.picture.facts.length) p.append(el("div", { class: "u" }, "No facts could be quoted from the pages."));
-    p.append(list, el("div", { class: "u" }, `${camp.picture.rejected.length} AI statements rejected (quote not word for word on the page). Model: ${camp.picture.model || "?"}.`));
-    if (!camp.sent_at) p.append(stepButton(card, r, "picture", "Rebuild picture"));
-  } else {
-    p.append(el("div", { class: "u" }, "AI reads the saved pages and lists facts, each with an exact quote and link. About 30 seconds."),
-      stepButton(card, r, "picture", "Build company picture"));
-  }
-  box.append(p);
-
-  // Checks + decision
-  const c = el("div", { class: "step" }, el("h3", {}, "2 · Checks and decision"));
-  if (camp.checks) {
-    const k = camp.checks;
-    c.append(el("div", {}, el("span", { class: "badge " + (DECISION_CLASS[k.decision] || "") }, k.decision), " ", k.decision_reason));
-    for (const [key, label] of [["gate", "B2B SaaS"], ["q1", "Q1 Size (Series A-C)"], ["q2", "Q2 Audit prep"], ["q3", "Q3 Client pressure"]]) {
-      const a = k[key];
-      const row = el("div", { class: "qrow" }, el("span", { class: "ans ans-" + a.answer }, a.answer), ` ${label}: ${a.why}`);
-      a.evidence.forEach(e => row.append(quoteLine(e)));
-      c.append(row);
-    }
-    c.append(el("div", { class: "u" }, "Searches: " + k.searches.map(s => s.query ? `“${s.query}” → ${s.result}` : s.result).join(" · ")));
-    if (k.decision === "Flag" && !camp.flag_approved) {
-      c.append(el("div", { class: "u" }, "A Flag needs a human decision before Hunter can run."),
-        stepButton(card, r, "approve", "I approve this Flag"));
-    } else if (k.decision === "Flag") {
-      c.append(el("div", { class: "u" }, "Flag approved by a human."));
-    }
-    if (!camp.sent_at) c.append(stepButton(card, r, "check", "Re-run checks"));
-  } else if (camp.picture) {
-    c.append(el("div", { class: "u" }, "Applies the Evidence Map (gate, Q1, Q2, Q3). Searches the web at most twice if something is unknown. Up to about 2 minutes."),
-      stepButton(card, r, "check", "Run checks"));
-  } else {
-    c.append(el("div", { class: "u" }, "Needs the company picture first."));
-  }
-  box.append(c);
-  return box;
 }
 
-function renderCard(r, st) {
-  st = st || { contact: null, campaign: null, next: "picture" };
-  const contact = st.contact;
-  const card = el("div", { class: "card" },
-    el("div", { class: "head" }, el("span", { class: "domain" }, r.domain || r.input || "?"),
-      el("span", {}, r.test_only ? el("span", { class: "badge b-warn", style: "margin-right:6px" }, "TEST ONLY") : null, badge(r))));
+function websiteCell(it) {
+  if (!it.r) return it.scraping
+    ? el("span", { style: { color: "var(--info-ink)" } }, "Reading… ", el("span", { class: "tick mono", "data-start": it.started }, "0 s"))
+    : el("span", { style: { color: "var(--info-ink)" } }, "Waiting");
+  const r = it.r;
+  if (r.error) return el("span", { style: { color: "var(--nogo-ink)" } }, "Error");
+  if (r.status === "skipped") return el("span", { class: "muted" }, "Skipped");
+  if (r.status === "unreadable") return el("span", { style: { color: "var(--nogo-ink)" } }, "Unreadable");
+  const n = (r.found || []).length;
+  return r.ran_out_of_time ? el("span", { style: { color: "var(--flag-ink)" } }, `Partial · ${n}/7`) : el("span", {}, `OK · ${n}/7 pages`);
+}
+function progress(m) {
+  const p = el("div", { class: "prog" });
+  m.s.forEach((x, i) => p.append(el("i", { class: x.state, title: STEPS[i].title })));
+  return p;
+}
+function decisionBadge(it) {
+  if (it.r && it.r.status === "skipped") return badge("Skipped", "b-neutral");
+  const d = it.st && it.st.campaign && it.st.campaign.decision;
+  return d ? badge(d, DEC_CLASS[d]) : el("span", { class: "faint" }, "—");
+}
 
-  if (r.error) { card.append(el("div", { class: "meta" }, r.error)); }
-  if (r.status === "skipped") { card.append(el("div", { class: "meta" }, r.reason || "")); return card; }
-  if (!r.pages) return card;
+function renderRun() {
+  $("sec-run").classList.toggle("hidden", !items.length);
+  $("runTitle").textContent = `This run · ${items.length} compan${items.length === 1 ? "y" : "ies"}`;
+  $("download").disabled = scrapingNow || !items.some(it => it.r);
+  const body = $("runBody");
+  body.replaceChildren();
+  items.forEach((it, i) => {
+    const m = model(it);
+    const pick = () => { sel = i; render(); };
+    body.append(el("tr", { class: "click" + (i === sel ? " sel" : ""), tabindex: "0", onclick: pick,
+                           onkeydown: (e) => { if (e.key === "Enter") pick(); } },
+      el("td", {}, el("div", { class: "cell-co" }, i === sel ? el("span", { class: "dot", style: { background: "var(--ink)" } }) : null,
+        el("span", { class: "dom" }, nameOf(it)), isTest(it) ? testBadge() : null)),
+      el("td", {}, websiteCell(it)),
+      el("td", {}, decisionBadge(it)),
+      el("td", {}, progress(m)),
+      el("td", { style: { maxWidth: "280px" } }, it.running ? el("span", { style: { color: "var(--info-ink)" } }, el("span", { class: "spin" }), "Working…") : m.status),
+      el("td", { class: "muted" }, m.next)));
+  });
+}
 
-  const when = r.saved_at ? ` · saved ${fmtTime(r.saved_at)}` : (r.save_error ? ` · not saved: ${r.save_error}` : "");
-  card.append(el("div", { class: "meta" },
-    `${r.seconds} s · fetches: step A ${r.fetches.step_a}, step B ${r.fetches.step_b} · ${r.robots}${when}`));
+function renderWorkspace() {
+  const ws = $("sec-work");
+  ws.classList.toggle("hidden", !items.length);
+  if (!items.length) { ws.replaceChildren(); return; }
+  if (sel >= items.length) sel = 0;
+  const it = items[sel];
+  const m = model(it);
+  const view = it.view ?? (m.cur ?? m.stop ?? (m.s.every(x => x.state === "done") ? 6 : 0));
 
-  const chips = el("div", { class: "chips" });
-  for (const t of PAGE_TYPES) chips.append(el("span", { class: "chip " + (r.pages[t] ? "found" : "missing") }, t));
-  card.append(chips);
+  const rail = el("div", { class: "card rail" },
+    el("div", { class: "rail-head" }, el("span", { class: "dom" }, nameOf(it)), decisionBadge(it), isTest(it) ? testBadge() : null));
+  const steps = el("div", { class: "steps" });
+  STEPS.forEach((step, i) => {
+    const x = m.s[i];
+    const circle = x.state === "done" ? "✓" : x.state === "stopped" ? "×" : String(i);
+    steps.append(el("button", { class: `st ${x.state}${x.approval ? " approval" : ""}${i === view ? " view" : ""}`,
+        onclick: () => { it.view = i; renderWorkspace(); }, "aria-current": i === view ? "step" : null },
+      el("span", { class: "c" }, x.state === "running" ? el("span", { class: "spin", style: { margin: "0" } }) : circle),
+      el("span", { class: "t" }, step.title), el("span", { class: "u" }, x.sub)));
+  });
+  rail.append(steps, el("div", { class: "statusbox" }, el("div", { class: "label" }, "Status"),
+    el("div", { class: "s" }, it.running ? "Working…" : m.status),
+    m.nextSentence ? el("div", { class: "n" }, (m.stop !== null ? "" : "Next: ") + m.nextSentence) : null));
 
+  ws.replaceChildren(rail, el("div", { class: "card panel" }, ...renderPanel(it, m, view)));
+}
+
+// ---------------------------------------------------------------- step panel
+function blockedReason(it, m, i) {
+  const camp = (it.st && it.st.campaign) || {};
+  if (m.s[i].state === "unreach") return "Not available — this company stopped earlier.";
+  if (m.s[i].state === "stopped") return m.stopWhy || "Stopped here.";
+  if (!it.r) return "Waiting for: Scrape";
+  if (i === 3) {
+    if (!camp.decision) return "Run the checks first.";
+    if (camp.decision === "Flag" && !camp.flag_approved && !it.r.test_only) return "Approve the Flag first.";
+  }
+  const firstOpen = m.s.findIndex(x => x.state !== "done");
+  return "Waiting for: " + STEPS[firstOpen >= 0 ? firstOpen : Math.max(0, i - 1)].title;
+}
+function costLine(key) {
+  const u = usage || {};
+  const ai = left(u.ai_used, u.ai_cap ?? 50), h = left(u.hunter_used, u.hunter_cap ?? 2), sd = left(u.send_used, u.send_cap ?? 3);
+  return {
+    picture: `AI · ~30 s · uses 1 of ${u.ai_cap ?? 50} AI steps${ai !== null ? ` (${ai} left today)` : ""}`,
+    check: "Up to ~2 min · may run 2 web searches",
+    contact: `Uses 1 of ${u.hunter_cap ?? 2} Hunter lookups${h !== null ? ` (${h} left today, shared)` : ""}`,
+    pain: "Instant · no AI",
+    draft: `AI · ~30 s · uses 1 of ${u.ai_cap ?? 50} AI steps${ai !== null ? ` (${ai} left today)` : ""}`,
+    send: `Uses 1 of ${u.send_cap ?? 3} inbox sends today${sd !== null ? ` (${sd} left, shared)` : ""}`,
+  }[key] || "";
+}
+const BTN_LABEL = { picture: "Build company picture", check: "Run checks", contact: "Find contact with Hunter",
+                    pain: "Pick pain points", draft: "Draft email" };
+const RERUN = { picture: "Rebuild picture (resets later steps)", check: "Re-run checks (resets later steps)",
+                pain: "Pick again", draft: "Draft again (uses 1 AI step)" };
+
+function renderPanel(it, m, i) {
+  const step = STEPS[i], x = m.s[i];
+  const camp = (it.st && it.st.campaign) || {};
+  const busy = !!it.running;
+  let act;
+  if (x.state === "running") {
+    act = el("div", { class: "act" }, el("button", { class: "btn", disabled: true }, el("span", { class: "spin" }), "Working…"));
+  } else if (x.state === "current" && i === 2 && x.approval) {
+    act = el("div", { class: "act" }, el("span", { class: "pill flag" }, "Needs your approval — read the evidence below"));
+  } else if (x.state === "current" && i === 6) {
+    act = el("div", { class: "act" }, el("span", { class: "pill" }, "Pick a hook and type the command below"), el("div", { class: "cost" }, costLine("send")));
+  } else if (x.state === "current" && BTN_LABEL[step.key]) {
+    act = el("div", { class: "act" },
+      el("button", { class: "btn", disabled: busy, onclick: () => runStep(it, step.key) }, BTN_LABEL[step.key]),
+      el("div", { class: "cost" }, costLine(step.key)));
+  } else if (x.state === "done") {
+    const kids = [el("span", { class: "pill done" }, "✓ Done")];
+    if (RERUN[step.key] && !camp.sent_at) kids.push(el("button", { class: "tert", onclick: () => { if (!it.running) runStep(it, step.key); } }, RERUN[step.key]));
+    const later = m.s.findIndex((y, j) => j > i && (y.state === "current" || y.state === "stopped"));
+    if (later > 0) kids.push(el("button", { class: "btn sec small", onclick: () => { it.view = later; renderWorkspace(); } }, `Continue to ${STEPS[later].title} →`));
+    act = el("div", { class: "act" }, ...kids);
+  } else {
+    act = el("div", { class: "act" }, el("span", { class: "pill" }, blockedReason(it, m, i)));
+  }
+  const out = [el("div", { class: "phead" },
+    el("div", {}, el("div", { class: "label" }, `Step ${i}`), el("h3", {}, step.title), el("div", { class: "desc" }, step.desc)), act)];
+
+  if (x.state === "running") {
+    const ph = PHASES[it.running] || { expect: 20, list: ["Working"] };
+    out.push(el("div", { class: "running-strip" },
+      el("div", { class: "row" },
+        el("span", { class: "phase", "data-start": it.started, "data-phases": JSON.stringify(ph.list), "data-expect": ph.expect }, ph.list[0] + "…"),
+        el("span", { class: "mono tick", "data-start": it.started, "data-expect": ph.expect }, `0 s · usually ${ph.expect} s`)),
+      el("div", { class: "bar" }, el("i", { class: "tickbar", "data-start": it.started, "data-expect": ph.expect, style: { width: "2%" } }))));
+  }
+
+  const body = el("div", { class: "pbody" });
+  const e = step.key === "check" ? (it.err.approve || it.err.check) : (step.key === "contact" || step.key === "send") ? null : it.err[step.key];
+  if (e) body.append(el("div", { class: "errblock" }, e.error));
+  ({ scrape: bodyScrape, picture: bodyPicture, check: bodyCheck, contact: bodyContact, pain: bodyPain, draft: bodyDraft, send: bodySend })[step.key](body, it, m);
+  if (body.childNodes.length) out.push(body);
+  return out;
+}
+function note(body, text) { body.append(el("div", { class: "muted", style: { fontSize: "13.5px" } }, text)); }
+
+// ----- step 0
+function missingWhy(r, t) {
+  const tries = (r.attempts || []).filter(a => a.type === t);
+  if (!tries.length) return "Not linked from the site";
+  const res = String(tries[tries.length - 1].result || "");
+  if (/^HTTP 404/.test(res)) return "No such page (404)";
+  if (/^HTTP/.test(res)) return `The site answered with an error (${res})`;
+  if (/robots/.test(res)) return "Blocked by the site's robots.txt";
+  if (/redirected to the homepage/.test(res)) return "Redirected to the homepage";
+  if (/same text as the homepage/.test(res)) return "Same as the homepage (page doesn't really exist)";
+  if (/^empty/.test(res)) return "Empty — may need JavaScript";
+  if (/^error/.test(res)) return "Couldn't connect";
+  if (/^not a web page/.test(res)) return "Not a web page";
+  if (/off the site/.test(res)) return "Redirected to another website";
+  return res;
+}
+function pathOf(u) { try { return new URL(u).pathname; } catch { return u; } }
+function bodyScrape(body, it) {
+  const r = it.r;
+  if (!r) { note(body, it.scraping ? "Reading the website now. About 20 seconds." : "Waiting for the companies before it."); return; }
+  if (r.error) { body.append(el("div", { class: "errblock" }, el("b", {}, "Scrape failed"), r.error)); return; }
+  if (r.status === "skipped") { body.append(el("div", { class: "soft" }, el("b", {}, "Skipped. "), r.reason || "On the do-not-contact list; nothing was fetched.")); return; }
+  body.append(el("div", { class: "muted", style: { fontSize: "13.5px" } },
+    `Took ${Math.round(r.seconds || 0)} s · ${(r.found || []).length} of 7 pages found` + (r.saved_at ? ` · saved ${fmtTime(r.saved_at, true)}` : "")));
+  if (r.status === "unreadable") body.append(el("div", { class: "soft" }, "Nothing readable was found. The site may be down, blocking us, or built only with JavaScript."));
+  if (r.ran_out_of_time) body.append(el("div", { class: "soft" }, "Partial: the time limit was reached before every page type was tried."));
+  if (!r.scrape_id && r.save_error) body.append(el("div", { class: "soft" }, "Not saved: " + r.save_error + ". The later steps need a saved scrape."));
+  const grid = el("div", { class: "pages" });
   for (const t of PAGE_TYPES) {
-    const p = r.pages[t];
-    if (!p) continue;
-    card.append(el("details", {},
-      el("summary", {}, el("span", { class: "t" }, t), " ",
-        el("span", { class: "u" }, `${p.url} · ${p.chars.toLocaleString()} chars · found by ${p.found_by}`)),
-      el("pre", {}, p.text || "(empty: page may need JavaScript)")));
-  }
-  if (r.log && r.log.length) {
-    card.append(el("details", {}, el("summary", {}, el("span", { class: "u" }, "Run log")), el("pre", {}, r.log.join("\n"))));
-  }
-
-  if (r.scrape_id) card.append(renderSteps(card, r, st));
-
-  // Hunter
-  const box = el("div", { class: "contact" });
-  const camp = st.campaign || {};
-  const hunterBlocked = !camp.decision ? "Run the checks first."
-    : (camp.decision === "No-Go" && !r.test_only) ? "No-Go: Hunter will not run (only a TEST ONLY run overrides this)."
-    : (camp.decision === "Flag" && !camp.flag_approved && !r.test_only) ? "Approve the Flag first." : "";
-  if (r.scrape_id) {
-    const inner = el("div");
-    box.append(el("h3", { style: "font-size:14px;margin:0 0 6px" }, "3 · Contact (Hunter)"), inner);
-    if (contact && contact.outcome && contact.outcome !== "pending") {
-      renderContact(inner, contact);
+    const p = (r.pages || {})[t];
+    if (p) {
+      const empty = p.empty || !p.text;
+      const how = p.found_by ? p.found_by[0].toUpperCase() + p.found_by.slice(1) : "Found";
+      grid.append(el("button", { class: "pg found" + (it.openPage === t ? " on" : ""), "aria-expanded": String(it.openPage === t),
+          onclick: () => { it.openPage = it.openPage === t ? null : t; renderWorkspace(); } },
+        el("span", { class: "nm" }, el("span", { class: "dot " + (empty ? "flag" : "go") }), t),
+        el("span", { class: "why" }, `${how} · ${pathOf(p.url)}${empty ? " · empty" : ""}`)));
     } else {
-      const btn = el("button", { class: "small ghost" }, "Find contact with Hunter (uses 1 daily lookup)");
-      btn.addEventListener("click", async () => {
-        btn.disabled = true;
-        btn.replaceChildren(el("span", { class: "spinner" }), "Asking Hunter…");
-        const c = await api("/api/contact", { scrape_id: r.scrape_id });
-        if (c.error) {
-          btn.disabled = false; btn.textContent = "Try again";
-          btn.after(el("div", { class: "err" }, c.error));
-        } else {
-          const fresh = await api("/api/step", { scrape_id: r.scrape_id, step: "state" });
-          card.replaceWith(renderCard(r, fresh.error ? Object.assign({}, st, { contact: c }) : fresh));
-        }
-        loadUsage(); loadRecent();
-      });
-      if (hunterBlocked) inner.append(el("div", { class: "u" }, hunterBlocked)); else inner.append(btn);
+      grid.append(el("div", { class: "pg" }, el("span", { class: "nm" }, el("span", { class: "dot hollow" }), el("span", { class: "muted" }, t)),
+        el("span", { class: "why" }, missingWhy(r, t))));
     }
-    card.append(box);
-    card.append(renderOutreach(card, r, st));
   }
-  return card;
+  body.append(grid);
+  const op = it.openPage && (r.pages || {})[it.openPage];
+  if (op) {
+    const rd = el("div", { class: "reader" }, el("div", { style: { display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap", marginBottom: "6px" } },
+      el("b", { style: { textTransform: "capitalize" } }, it.openPage), link(op.url, op.url)));
+    const lines = (op.text || "(empty: the page may need JavaScript)").split("\n").filter(l => l.trim());
+    for (const l of lines.slice(0, 400)) rd.append(l.length < 60 && !/[.!?:,]$/.test(l.trim()) ? el("div", { class: "rh" }, l) : el("p", {}, l));
+    if (lines.length > 400) rd.append(el("p", { class: "faint" }, `… ${lines.length - 400} more lines (use Download JSON for the full text).`));
+    body.append(rd);
+  }
+  if (r.log && r.log.length) body.append(el("details", {}, el("summary", { class: "tert", style: { textDecoration: "none" } }, "Technical log"),
+    el("pre", { class: "mono", style: { fontSize: "11.5px", whiteSpace: "pre-wrap", color: "var(--muted)" } }, r.log.join("\n"))));
 }
 
-function renderOutreach(card, r, st) {
-  const camp = st.campaign || {};
-  const found = st.contact && st.contact.outcome === "found";
-  const box = el("div");
-
-  // 4 · Pain points
-  const p = el("div", { class: "step" }, el("h3", {}, "4 · Pain points"));
-  if (camp.pain) {
-    p.append(el("div", { class: "u" }, `Group: ${camp.pain.group_name}. ${camp.pain.why}` +
-      (camp.pain.list_status !== "APPROVED" ? " (list is still a DRAFT)" : "")));
-    const list = el("ul", { class: "facts" });
-    for (const x of camp.pain.picked) {
-      const li = el("li", {}, el("strong", {}, x.id + ": "), x.pain, el("div", { class: "u" }, x.note));
-      (x.evidence || []).forEach(e => li.append(quoteLine(e)));
-      list.append(li);
-    }
-    p.append(list);
-    if (!camp.sent_at) p.append(stepButton(card, r, "pain", "Pick again"));
-  } else if (found && st.next === "pain") {
-    p.append(el("div", { class: "u" }, "Picks up to 2 from your list for the contact's role. Typical challenges for the role, never claims about the company. No AI."),
-      stepButton(card, r, "pain", "Pick pain points"));
-  } else {
-    p.append(el("div", { class: "u" }, st.contact && st.contact.outcome === "none"
-      ? "No contact was found, so this stops here." : "Comes after the steps above (a found contact and a decision that allows outreach)."));
-  }
-  box.append(p);
-
-  // 5 · Email draft
-  const d = el("div", { class: "step" }, el("h3", {}, "5 · Email draft"));
-  const em = camp.email;
-  if (em) {
-    if (!em.hooks.length) {
-      d.append(el("div", { class: "err" }, "No hook found, so no email. Nothing on the company's own pages passed the hook rules."));
-    } else {
-      d.append(el("div", { class: "u" }, `Subject: `, el("strong", {}, em.subject), ` · ${em.words} words · hook ${em.hook_n}` +
-        (em.wording_status !== "APPROVED" ? " · wording is still a DRAFT" : "")),
-        el("pre", {}, em.body));
-      const hl = el("ol", { class: "facts" });
-      em.hooks.forEach(h => hl.append(el("li", { value: h.n }, el("span", { class: "quote" }, `“${h.quote}”`), " — ",
-        el("a", { href: h.source_url, target: "_blank", rel: "noopener noreferrer nofollow" }, "source"),
-        h.topics.length ? el("span", { class: "u" }, " · " + h.topics.join(", ")) : null)));
-      d.append(el("div", { class: "u", style: "margin-top:8px" }, "Hooks that passed every rule (pick one when sending):"), hl);
-    }
-    if (em.rejected_hooks && em.rejected_hooks.length) {
-      d.append(el("details", {}, el("summary", {}, el("span", { class: "u" }, `${em.rejected_hooks.length} hooks rejected`)),
-        el("ul", { class: "facts" }, ...em.rejected_hooks.map(h => el("li", { class: "u" }, `“${h.quote}” — ${h.reason}`)))));
-    }
-    if (!camp.sent_at) d.append(stepButton(card, r, "draft", "Draft again (uses 1 AI step)"));
-  } else if (camp.pain) {
-    d.append(el("div", { class: "u" }, "AI suggests hook quotes from the company's own pages; code checks them and fills your fixed template. About 30 seconds."),
-      stepButton(card, r, "draft", "Draft email"));
-  } else {
-    d.append(el("div", { class: "u" }, "Needs the pain points first."));
-  }
-  box.append(d);
-
-  // 6 · Send to my inbox
-  const s = el("div", { class: "step" }, el("h3", {}, "6 · Send to my inbox"));
-  if (camp.sent_at) {
-    const res = camp.send_result || {};
-    s.append(el("div", {}, res.ok ? el("span", { class: "badge b-ok" }, "delivered") : el("span", { class: "badge b-warn" }, "unclear"),
-      ` Sent ${fmtTime(camp.sent_at)} to your own inbox with hook ${res.hook}. ` + (res.ok ? "Logged." : (res.error || ""))));
-  } else if (em && em.hooks.length) {
-    const want = `send ${r.domain}, hook ${em.hook_n}`;
-    const input = el("input", { class: "cmd", type: "text", placeholder: want, spellcheck: "false", autocomplete: "off" });
-    s.append(el("div", { class: "u" }, `Goes ONLY to your own inbox (never the contact), once, plain text. To send, type exactly: `,
-      el("code", {}, want), " (or another hook number)."),
-      el("div", { class: "row" }, input, stepButton(card, r, "send", "Send to my inbox", () => ({ command: input.value }))));
-    if (camp.send_result && camp.send_result.ok === false) s.append(el("div", { class: "err" }, "Last try failed: " + camp.send_result.error));
-  } else {
-    s.append(el("div", { class: "u" }, "Needs a draft with a hook first."));
-  }
-  box.append(s);
-  return box;
-}
-
-// ---------------------------------------------------------------- recent runs
-async function loadRecent() {
-  const data = await api("/api/runs");
-  const box = $("recent");
-  if (data.error) { box.textContent = "Recent runs unavailable (" + data.error + ")."; return; }
-  if (!data.runs.length) { box.textContent = "No saved runs yet."; return; }
-  const tbody = el("tbody");
-  for (const run of data.runs) {
-    const open = el("button", { class: "small ghost" }, "Open");
-    open.addEventListener("click", async () => {
-      open.disabled = true;
-      const d = await api("/api/runs?id=" + encodeURIComponent(run.id));
-      open.disabled = false;
-      if (d.error) { $("progress").textContent = d.error; return; }
-      results = [Object.assign({}, d.scrape, { contact: d.contact, campaign: d.campaign })];
-      $("results").replaceChildren(renderCard(d.scrape, d));
-      $("progress").textContent = `Opened saved run: ${run.domain}.`;
-      $("download").disabled = false;
-      $("progress").scrollIntoView({ behavior: "smooth" });
-    });
-    const contact = run.contact === "found" ? "found" : run.contact === "none" ? "none found" : "–";
-    const decision = run.decision ? el("span", { class: "badge " + (DECISION_CLASS[run.decision] || "") }, run.decision) : "–";
-    tbody.append(el("tr", {},
-      el("td", {}, el("strong", {}, run.domain), run.test_only ? el("div", { class: "u" }, "TEST ONLY") : null),
-      el("td", { class: "u" }, fmtTime(run.created_at)),
-      el("td", {}, run.status),
-      el("td", { class: "u" }, `${run.found.length} of 7 pages`),
-      el("td", {}, decision),
-      el("td", { class: "u" }, contact),
-      el("td", { class: "u" }, run.sent ? "sent to you" : run.drafted ? "drafted" : "–"),
-      el("td", {}, open)));
-  }
-  box.className = "table-wrap";
-  box.replaceChildren(el("table", {},
-    el("thead", {}, el("tr", {}, ...["Domain", "When", "Status", "Pages", "Decision", "Contact", "Email", ""].map(h => el("th", {}, h)))),
-    tbody));
-}
-
-// ---------------------------------------------------------------- scrape
-$("go").addEventListener("click", async () => {
-  const domains = parseDomains($("domains").value);
-  if (!domains.length) { $("progress").textContent = "Type at least one domain."; return; }
-  if (domains.length > MAX_DOMAINS) {
-    $("progress").textContent = `Please enter at most ${MAX_DOMAINS} domains (you entered ${domains.length}).`;
+// ----- step 1
+function bodyPicture(body, it, m) {
+  const p = ((it.st && it.st.campaign) || {}).picture;
+  if (!p) {
+    if (m.s[1].state !== "unreach") note(body, "The AI reads the saved pages and lists facts such as funding, certifications, open jobs, enterprise plans and named customers. Each one needs an exact quote and a link, or it is thrown away.");
     return;
   }
-  $("go").disabled = true; $("download").disabled = true; $("testonly").disabled = true;
-  $("results").replaceChildren(); results = [];
-  for (let i = 0; i < domains.length; i++) {
-    $("progress").replaceChildren(el("span", { class: "spinner" }), `Scraping ${i + 1} of ${domains.length}: ${domains[i]} …`);
-    const r = await api("/api/scrape", { domain: domains[i], test_only: $("testonly").checked });
-    if (!r.domain) r.input = domains[i];
-    results.push(r);
-    $("results").append(renderCard(r));
+  const list = el("div", { class: "facts" });
+  for (const f of p.facts) list.append(el("div", { class: "fact" }, el("div", { class: "k" }, FIELD_LABELS[f.field] || f.field),
+    el("div", {}, el("div", { class: "v" }, f.value), evLine(f))));
+  if (!p.facts.length) note(body, "No facts could be quoted from the pages. Missing means unknown.");
+  body.append(list, el("div", { class: "faint", style: { fontSize: "12.5px" } },
+    `${(p.rejected || []).length} AI statements rejected (quote not word for word on the page) · model ${p.model || "?"}`));
+}
+
+// ----- step 2
+function bodyCheck(body, it, m) {
+  const camp = (it.st && it.st.campaign) || {};
+  const k = camp.checks;
+  if (!k) {
+    if (m.s[2].state !== "unreach") note(body, "B2B SaaS? Series A–C? A sign they need audit help? Pressure from enterprise clients? Missing details may trigger up to 2 web searches.");
+    return;
   }
-  $("progress").textContent = `Done: ${domains.length} domain${domains.length > 1 ? "s" : ""}.`;
-  $("go").disabled = false; $("download").disabled = false; $("testonly").disabled = false;
-  loadRecent();
+  body.append(el("div", { class: "decision " + (DEC_CLASS[k.decision] || "b-neutral") }, el("span", { class: "w" }, k.decision), el("span", {}, k.decision_reason)));
+  if (k.decision === "Flag" && !camp.flag_approved) {
+    body.append(el("div", { class: "approve" }, el("span", {}, "A Flag needs a human decision before Hunter can run. Read the evidence below first."),
+      el("button", { class: "btn", disabled: !!it.running, onclick: () => runStep(it, "approve") }, "I approve this Flag")));
+  } else if (k.decision === "Flag") {
+    body.append(el("div", { style: { color: "var(--go-ink)", fontSize: "13.5px" } }, "✓ Flag approved by a human."));
+  }
+  const rows = el("div");
+  for (const [key, label] of [["gate", "Gate · B2B SaaS"], ["q1", "Q1 · Size (Series A–C)"], ["q2", "Q2 · Audit prep"], ["q3", "Q3 · Client pressure"]]) {
+    const a = k[key] || { answer: "unknown", why: "", evidence: [] };
+    rows.append(el("div", { class: "qrow" }, el("div", { class: "k" }, label), el("div", {}, badge(a.answer, ANS_CLASS[a.answer], true)),
+      el("div", {}, el("div", { style: { fontSize: "13.5px" } }, a.why), ...(a.evidence || []).map(evLine))));
+  }
+  body.append(rows);
+  const searches = (k.searches || []).filter(s => s.query);
+  body.append(el("div", {}, el("div", { class: "label", style: { marginBottom: "4px" } }, "Web searches"),
+    searches.length ? searches.map(s => el("div", { class: "ev" }, el("span", { class: "mono" }, `“${s.query}”`), ` → ${s.result}`))
+                    : el("div", { class: "ev" }, (k.searches || []).map(s => s.result).join(" · ") || "No web searches were needed")));
+}
+
+// ----- step 3
+const CONTACT_ERR = { 429: "Daily limit reached", 502: "Hunter couldn't be reached — this lookup was not counted",
+                      409: "A lookup is already running", 403: "Not allowed", 503: "Not set up", 404: "Not found" };
+function bodyContact(body, it, m) {
+  const c = it.st && it.st.contact;
+  const e = it.err.contact;
+  if (e) body.append(el("div", { class: "errblock" }, el("b", {}, CONTACT_ERR[e._code] || "Something went wrong"), e.error));
+  if (!c || c.outcome === "pending") {
+    if (c && c.outcome === "pending") note(body, "A lookup is in progress. Reopen this company in a moment.");
+    else if (m.s[3].state !== "unreach" && m.s[3].state !== "stopped") note(body, "Hunter returns people at the company's domain and one is picked: security / compliance first, then CTO / head of engineering, then a founder. Never automatic, one company at a time.");
+    return;
+  }
+  if (c.outcome === "none") {
+    body.append(el("div", { class: "soft" }, `No contact found. Hunter returned ${(c.contact && c.contact.people_returned) || 0} people; none had a matching title with a name. The journey stops here.`));
+    return;
+  }
+  const p = c.contact || {};
+  const low = p.low_confidence;
+  const leftCol = el("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } },
+    low ? el("div", {}, badge("Low confidence", "b-flag", true)) : null,
+    el("div", { class: "who" }, p.name), el("div", { style: { fontSize: "15px" } }, p.position),
+    el("div", { class: "mono", style: { fontSize: "13.5px" } }, p.email),
+    el("div", { class: "bar", style: { maxWidth: "260px", marginTop: "6px" } },
+      el("i", { style: { width: Math.max(0, Math.min(100, p.confidence || 0)) + "%", background: low ? "var(--flag-ink)" : "var(--ink)" } })),
+    el("div", { class: "muted", style: { fontSize: "12.5px" } }, `Confidence ${p.confidence} / 100 · Email check: ${p.verification || "unknown"}`),
+    el("div", { class: "muted", style: { fontSize: "12.5px", marginTop: "6px" } }, "Do not email from here. This is research only. Deleted after 30 days."));
+  const rightCol = el("div", { style: { fontSize: "13.5px" } },
+    el("div", {}, `Picked by rule ${p.rule} from ${p.people_returned} people Hunter returned`),
+    el("ol", { class: "rules" }, ...["Security / CISO / compliance / GRC", "CTO / head of engineering", "Founder"].map((t, j) => el("li", { class: j + 1 === p.rule ? "on" : null }, t))),
+    (p.sources && p.sources.length) ? el("div", { style: { marginTop: "10px" } }, el("div", { class: "label" }, "Hunter sources"), ...p.sources.map(s => el("div", { class: "ev" }, link(s)))) : null,
+    c.looked_up_at ? el("div", { class: "faint", style: { fontSize: "12.5px", marginTop: "10px" } }, `Looked up ${fmtTime(c.looked_up_at)}`) : null);
+  body.append(el("div", { class: "two" }, leftCol, rightCol));
+}
+
+// ----- step 4
+function bodyPain(body, it, m) {
+  const pn = ((it.st && it.st.campaign) || {}).pain;
+  if (!pn) {
+    if (m.s[4].state !== "unreach") note(body, "Typical challenges for the contact's role, never claims about the company. Some only count when the company's own site shows a matching fact.");
+    return;
+  }
+  body.append(el("div", { style: { display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" } },
+    el("span", {}, `Role group: ${pn.group_name}`), pn.list_status !== "APPROVED" ? badge("List is still a draft", "b-flag", true) : null));
+  const cards = el("div", { class: "paincards" });
+  for (const x of pn.picked) {
+    const backed = (x.evidence || []).length > 0;
+    cards.append(el("div", { class: "paincard" }, el("span", { class: "mono faint", style: { fontSize: "12px" } }, x.id),
+      el("div", { class: "p" }, x.pain),
+      el("div", { style: { fontSize: "12.5px", color: backed ? "var(--go-ink)" : "var(--muted)" } },
+        backed ? "Backed by a quoted page fact" : "Typical for the role; no company-specific evidence"),
+      ...(x.evidence || []).map(evLine)));
+  }
+  body.append(cards);
+}
+
+// ----- step 5
+function rejectedList(hooks) {
+  return hooks.map(h => el("div", { class: "rej" }, el("s", {}, `“${h.quote}”`), el("div", { style: { color: "var(--nogo-ink)" } }, h.reason)));
+}
+function bodyDraft(body, it, m) {
+  const em = ((it.st && it.st.campaign) || {}).email;
+  if (!em) {
+    if (m.s[5].state !== "unreach") note(body, "The AI only suggests opening quotes. Each must be word for word from the company's own pages, 4–30 words, with no funding, negative news or menu text. Your fixed template writes the rest.");
+    return;
+  }
+  const rej = em.rejected_hooks || [];
+  if (!em.hooks.length) {
+    body.append(el("div", { class: "soft" }, "No hook found, so no email. The journey stops here."));
+    if (rej.length) body.append(el("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } }, el("div", { class: "label" }, "Rejected hooks"), ...rejectedList(rej)));
+    return;
+  }
+  const outOfRange = em.words < 80 || em.words > 100;
+  const mail = el("div", { class: "mail" },
+    el("div", { class: "mh" }, el("div", { class: "subj" }, em.subject),
+      el("div", { class: "meta" }, el("span", { style: { color: outOfRange ? "var(--flag-ink)" : null } }, `${em.words} words · aim 80–100`),
+        el("span", {}, `Uses hook ${em.hook_n}`),
+        em.wording_status !== "APPROVED" ? el("span", { style: { color: "var(--flag-ink)" } }, "Wording is still a DRAFT") : null)),
+    el("pre", {}, em.body));
+  const hooks = el("div", { class: "hooks" }, el("div", { class: "label" }, "Hooks that passed"),
+    ...em.hooks.map(h => el("div", { class: "hook" }, el("span", { class: "n" }, String(h.n)),
+      el("div", {}, el("i", {}, `“${h.quote}”`), el("div", { class: "ev" }, link(h.source_url), h.topics.length ? ` · ${h.topics.join(", ")}` : "")))));
+  if (rej.length) {
+    hooks.append(el("button", { class: "tert", style: { alignSelf: "flex-start" }, onclick: () => { it.showRejected = !it.showRejected; renderWorkspace(); } },
+      it.showRejected ? "Hide rejected hooks" : `Show ${rej.length} rejected hook${rej.length > 1 ? "s" : ""}`));
+    if (it.showRejected) hooks.append(...rejectedList(rej));
+  }
+  body.append(el("div", { class: "two" }, mail, hooks));
+}
+
+// ----- step 6
+function bodySend(body, it, m) {
+  const st = it.st || {}, camp = st.campaign || {}, em = camp.email, c = (st.contact && st.contact.contact) || {};
+  const res = camp.send_result || {};
+  const e = it.err.send;
+  if (camp.sent_at) {
+    if (res.ok) body.append(el("div", { class: "decision b-go" }, el("span", { class: "w", style: { fontSize: "22px" } }, "Delivered"),
+      el("span", {}, `Sent ${fmtTime(camp.sent_at, true)} to your own inbox with hook ${res.hook}. Logged. It can't be sent twice.`)));
+    else body.append(el("div", { class: "decision b-flag" }, el("span", { class: "w", style: { fontSize: "22px" } }, "Unclear"),
+      el("span", {}, (res.error ? res.error + " " : "") + "Check your inbox before trying again. This send is locked.")));
+    return;
+  }
+  if (!em || !em.hooks || !em.hooks.length || m.s[6].state === "unreach") {
+    if (m.s[6].state !== "unreach") note(body, "Needs a draft with a hook first.");
+    return;
+  }
+  const domain = it.r.domain;
+  if (!em.hooks.some(h => h.n === it.sendHook)) it.sendHook = em.hook_n;
+  const want = `send ${domain}, hook ${it.sendHook}`;
+  const input = el("input", { class: "text", type: "text", spellcheck: "false", autocomplete: "off", "aria-label": "Type the send command",
+                              placeholder: "Type the command here" });
+  input.value = it.sendInput || "";
+  const hint = el("div", { style: { fontSize: "12.5px" }, "aria-live": "polite" });
+  const btn = el("button", { class: "btn" }, "Send to my inbox");
+  const update = () => {
+    const v = input.value;
+    it.sendInput = v;
+    const ok = v.trim() === want;
+    input.classList.toggle("ok", ok);
+    btn.disabled = !ok || !!it.running;
+    hint.className = ok ? "hintok" : "muted";
+    hint.textContent = !v ? "Nothing typed yet" : ok ? "✓ Matches — ready to send" : want.startsWith(v) ? "Keep typing…" : "Doesn't match yet";
+  };
+  input.addEventListener("input", update);
+  input.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && !btn.disabled) btn.click(); });
+  btn.addEventListener("click", () => { if (input.value.trim() === want) runStep(it, "send", { command: input.value.trim() }); });
+  update();
+  const picker = el("div", { class: "seg", role: "group", "aria-label": "Hook", style: { alignSelf: "flex-start" } },
+    ...em.hooks.map(h => el("button", { class: h.n === it.sendHook ? "on" : null, "aria-pressed": String(h.n === it.sendHook),
+      onclick: () => { it.sendHook = h.n; it.sendInput = ""; renderWorkspace(); } }, `Hook ${h.n}`)));
+  const hk = em.hooks.find(h => h.n === it.sendHook) || em.hooks[0];
+  const form = el("div", { class: "sendform" },
+    el("div", { style: { fontSize: "13.5px" } }, "Goes ", el("b", {}, "only to your own inbox"), " — never the contact. Once, plain text. Pick a hook, then type the command exactly."),
+    picker, el("div", { class: "ev" }, el("i", {}, `“${hk.quote}”`)),
+    el("div", { class: "label" }, "Type exactly"), el("div", { class: "cmd" }, want),
+    input, hint, el("div", {}, btn),
+    e ? el("div", { class: "err" }, e.error) : null,
+    (res.ok === false && !e) ? el("div", { class: "err" }, "Last try was refused (nothing was sent): " + res.error) : null,
+    el("div", { class: "faint", style: { fontSize: "12px" } }, costLine("send")));
+  const preview = el("div", {}, el("div", { class: "label", style: { marginBottom: "6px" } }, "What arrives in your inbox"),
+    el("div", { class: "preview" },
+      el("div", {}, "DRAFT FOR YOUR REVIEW. This went only to you, never to the contact."),
+      it.r.test_only ? el("div", {}, "TEST ONLY run: do not use this email.") : null,
+      el("div", {}, `For: ${c.name}, ${c.position} · ${c.email} · confidence ${c.confidence}${c.low_confidence ? ", LOW CONFIDENCE" : ""}`),
+      el("div", {}, `Decision: ${camp.decision}${camp.flag_approved ? " (Flag approved by you)" : ""}`),
+      el("div", {}, `Hook ${hk.n} from ${shortUrl(hk.source_url)} · pain points ${((camp.pain && camp.pain.picked) || []).map(p => p.id).join(", ")}`),
+      el("div", { style: { marginTop: "8px", color: "var(--faint)" } }, "Then the full draft.")));
+  body.append(el("div", { class: "two" }, form, preview));
+}
+
+// ---------------------------------------------------------------- run a step
+async function runStep(it, key, extra) {
+  if (it.running || !it.r || !it.r.scrape_id) return;
+  it.running = key; it.started = Date.now();
+  delete it.err[key]; if (key === "approve") delete it.err.check;
+  it.view = KEY_INDEX[key];
+  render();
+  let d;
+  if (key === "contact") {
+    d = await api("/api/contact", { scrape_id: it.r.scrape_id }, 70000);
+    if (!d.error) {
+      const fresh = await api("/api/step", { scrape_id: it.r.scrape_id, step: "state" }, 60000);
+      if (!fresh.error) it.st = fresh;
+    }
+  } else {
+    d = await api("/api/step", Object.assign({ scrape_id: it.r.scrape_id, step: key }, extra || {}), 300000);
+    if (!d.error) it.st = d;
+  }
+  if (d.error) {
+    it.err[key] = d;
+    if (key === "send") {      // refresh, so a refused / unclear send shows its saved result
+      const fresh = await api("/api/step", { scrape_id: it.r.scrape_id, step: "state" }, 60000);
+      if (!fresh.error) it.st = fresh;
+    }
+  } else if (key === "send") it.sendInput = "";
+  it.running = null;
+  render(); loadUsage(); loadRecent();
+}
+
+// ---------------------------------------------------------------- tickers (update text in place, no re-render)
+setInterval(() => {
+  const now = Date.now();
+  document.querySelectorAll("[data-start]").forEach(n => {
+    const s = Math.max(0, Math.round((now - Number(n.dataset.start)) / 1000));
+    const ex = Number(n.dataset.expect || 0);
+    if (n.classList.contains("tickbar")) n.style.width = Math.min(95, Math.max(2, (s / Math.max(ex, 1)) * 85)) + "%";
+    else if (n.classList.contains("phase")) {
+      const list = JSON.parse(n.dataset.phases || "[]");
+      n.textContent = (list[Math.min(list.length - 1, Math.floor((s / Math.max(ex, 1)) * list.length))] || "Working") + "…";
+    } else if (n.classList.contains("tick")) n.textContent = ex ? `${s} s · usually ${ex} s` : `${s} s`;
+  });
+}, 1000);
+
+// ---------------------------------------------------------------- new run
+let testOn = false;
+function parseDomains(text) {
+  const seen = new Set();
+  return text.split(/[\s,;]+/).map(s => s.trim()).filter(s => s && !seen.has(s.toLowerCase()) && seen.add(s.toLowerCase()));
+}
+const LOOKS_LIKE_SITE = /^(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,}(\/\S*)?$/i;
+function checkInput() {
+  const list = parseDomains($("domains").value);
+  $("countHint").textContent = `${list.length} of ${MAX_DOMAINS} websites`;
+  $("countHint").style.color = list.length > MAX_DOMAINS ? "var(--nogo-ink)" : "";
+  return list;
+}
+function showNewErr(t) { $("newErr").textContent = t; $("newErr").classList.remove("hidden"); }
+$("domains").addEventListener("input", () => { checkInput(); $("newErr").classList.add("hidden"); });
+$("domains").addEventListener("keydown", (e) => { if (e.key === "Enter") $("go").click(); });
+$("testSwitch").addEventListener("click", () => {
+  if (scrapingNow) return;
+  testOn = !testOn;
+  $("testSwitch").setAttribute("aria-checked", String(testOn));
+});
+
+$("go").addEventListener("click", async () => {
+  if (scrapingNow) return;
+  const list = checkInput();
+  if (!list.length) return showNewErr("Type at least one website, e.g. fake-co.com.");
+  if (list.length > MAX_DOMAINS) return showNewErr(`That's ${list.length} websites — the limit is ${MAX_DOMAINS}. Remove ${list.length - MAX_DOMAINS} to continue.`);
+  if (list.some(d => !LOOKS_LIKE_SITE.test(d))) return showNewErr("Some entries don't look like websites. Use a form like fake-co.com.");
+  $("newErr").classList.add("hidden");
+  scrapingNow = true;
+  const test = testOn;
+  $("testSwitch").setAttribute("aria-disabled", "true");
+  items = list.map(d => ({ input: d, test_only: test, err: {}, r: null, st: null }));
+  sel = 0; confirmId = null;
+  render(); renderRecent(); scrollToSec("sec-run");
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    it.scraping = true; it.started = Date.now();
+    $("go").disabled = true; $("go").textContent = `Scraping ${i + 1} of ${items.length}…`;
+    render();
+    const r = await api("/api/scrape", { domain: it.input, test_only: test }, 130000);
+    if (!r.domain) r.input = it.input;
+    delete r._code;
+    it.r = r; it.scraping = false;
+    if (r.scrape_id) it.st = { next: "picture", status: "Scraped", next_steps: ["Build the company picture."], campaign: null, contact: null };
+    render();
+  }
+  scrapingNow = false;
+  $("go").disabled = false; $("go").textContent = "Scrape";
+  $("testSwitch").removeAttribute("aria-disabled");
+  render(); loadRecent();
 });
 
 $("download").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(results, null, 2)], { type: "application/json" });
-  const a = el("a", { href: URL.createObjectURL(blob), download: `scrape-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json` });
+  const data = items.filter(it => it.r).map(it => Object.assign({}, it.r, { contact: it.st && it.st.contact, campaign: it.st && it.st.campaign }));
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = el("a", { href: URL.createObjectURL(blob), download: `prospectiq-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json` });
   document.body.append(a); a.click(); a.remove();
 });
 
+// ---------------------------------------------------------------- usage
+async function loadUsage() {
+  const u = await api("/api/usage");
+  usage = u.error ? null : u;
+  $("dbBanner").classList.toggle("hidden", !usage || usage.database !== false);
+  renderMeters();
+  if (items.length) renderWorkspace();
+}
+
+// ---------------------------------------------------------------- recent runs
+const CHIPS = ["All", "Go", "Flag", "No-Go", "Test only"];
+function renderChips() {
+  $("chips").replaceChildren(...CHIPS.map(c => el("button", { class: "chip" + (c === recentFilter ? " on" : ""), "aria-pressed": String(c === recentFilter),
+    onclick: () => { recentFilter = c; renderChips(); renderRecent(); } }, c)));
+}
+async function loadRecent() {
+  const d = await api("/api/runs");
+  if (d.error) {
+    $("recentBody").replaceChildren(el("tr", {}, el("td", { colspan: "6", class: "muted" }, "Recent runs unavailable (" + d.error + ").")));
+    return;
+  }
+  recent = d.runs || [];
+  $("navRecentN").textContent = recent.length;
+  renderRecent();
+}
+function renderRecent() {
+  const q = $("recentSearch").value.trim().toLowerCase();
+  const rows = recent.filter(r => (!q || r.domain.toLowerCase().includes(q)) &&
+    (recentFilter === "All" || (recentFilter === "Test only" ? r.test_only : r.decision === recentFilter)));
+  const body = $("recentBody");
+  body.replaceChildren();
+  if (!recent.length) { body.append(el("tr", {}, el("td", { colspan: "6", class: "muted" }, "No saved runs yet."))); return; }
+  if (!rows.length) { body.append(el("tr", {}, el("td", { colspan: "6", class: "muted" }, "Nothing matches."))); return; }
+  for (const run of rows) {
+    const contact = { found: "Found", none: "None found", pending: "Looking up" }[run.contact] || "—";
+    const email = run.sent ? "Sent to inbox" : run.drafted ? "Drafted" : "—";
+    const openCell = confirmId === run.id
+      ? el("span", { class: "confirm" }, "Replace?",
+          el("button", { class: "btn small", onclick: () => openRun(run) }, "Open"),
+          el("button", { class: "btn sec small", onclick: () => { confirmId = null; renderRecent(); } }, "Keep"))
+      : el("button", { class: "btn sec small", disabled: scrapingNow, onclick: () => {
+          if (items.length) { confirmId = run.id; renderRecent(); } else openRun(run);
+        } }, "Open");
+    body.append(el("tr", {},
+      el("td", {}, el("div", { class: "cell-co" }, el("span", { class: "dom" }, run.domain), run.test_only ? testBadge() : null)),
+      el("td", { class: "muted" }, fmtTime(run.created_at, true)),
+      el("td", {}, run.decision ? badge(run.decision, DEC_CLASS[run.decision]) : el("span", { class: "faint" }, "—")),
+      el("td", { class: run.contact ? null : "faint" }, contact),
+      el("td", { class: (run.sent || run.drafted) ? null : "faint" }, email),
+      el("td", { style: { textAlign: "right" } }, openCell)));
+  }
+}
+async function openRun(run) {
+  confirmId = null;
+  const d = await api("/api/runs?id=" + encodeURIComponent(run.id));
+  if (d.error) { renderRecent(); showNewErr(d.error); return; }
+  items = [{ r: d.scrape, st: { next: d.next, status: d.status, next_steps: d.next_steps, campaign: d.campaign, contact: d.contact }, err: {}, input: run.domain }];
+  sel = 0;
+  render(); renderRecent();
+  scrollToSec("sec-work");
+}
+$("recentSearch").addEventListener("input", renderRecent);
+
+// ---------------------------------------------------------------- nav, scroll spy, washes fade, theme, menu
+document.querySelectorAll("#nav button").forEach(b => b.addEventListener("click", () => scrollToSec(b.dataset.sec)));
+function spy() {
+  let on = "sec-new";
+  for (const id of ["sec-new", "sec-run", "sec-work", "sec-recent"]) {
+    const n = $(id);
+    if (n && !n.classList.contains("hidden") && n.getBoundingClientRect().top < 140) on = id;
+  }
+  const fromBottom = document.documentElement.scrollHeight - (window.innerHeight + window.scrollY);
+  if (fromBottom < 4 && window.scrollY > 0) on = "sec-recent";
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.sec === on));
+  $("washes").style.opacity = fromBottom < 180 ? `calc(var(--wash-opacity) * ${Math.max(0, fromBottom / 180).toFixed(2)})` : "";
+}
+window.addEventListener("scroll", spy, { passive: true });
+window.addEventListener("resize", spy);
+
+function currentTheme() {
+  const t = document.documentElement.dataset.theme;
+  if (t) return t;
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function paintThemeButtons() {
+  document.querySelectorAll("[data-theme-set]").forEach(b => {
+    const on = b.dataset.themeSet === currentTheme();
+    b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
+  });
+}
+document.querySelectorAll("[data-theme-set]").forEach(b => b.addEventListener("click", () => {
+  document.documentElement.dataset.theme = b.dataset.themeSet;
+  try { localStorage.setItem("piq-theme", b.dataset.themeSet); } catch (e) {}
+  paintThemeButtons();
+}));
+try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paintThemeButtons); } catch (e) {}
+
+function closeMenu() { $("sidebar").classList.remove("open"); $("menuBtn").setAttribute("aria-expanded", "false"); }
+$("menuBtn").addEventListener("click", () => {
+  const open = !$("sidebar").classList.contains("open");
+  $("sidebar").classList.toggle("open", open); $("menuBtn").setAttribute("aria-expanded", String(open));
+});
+
+paintThemeButtons();
+renderChips();
+render();
+spy();
 loadUsage();
 loadRecent();
 </script>
