@@ -28,6 +28,12 @@ def lookup(conn, scrape_id, api_key, search=hunter.domain_search):
     existing = db.get_contact(conn, scrape_id)
     if existing and existing["outcome"] != "pending":
         return 200, dict(existing, already=True, usage=usage(conn))
+
+    import pipeline  # here to avoid a circular import
+    ok, why = pipeline.contact_allowed(db.get_campaign(conn, scrape_id), scrape.get("test_only"))
+    if not ok:
+        return 403, {"error": why, "usage": usage(conn)}
+
     if existing or not db.claim_contact(conn, scrape_id, domain):
         return 409, {"error": "A lookup for this scrape is already running. Try again in a minute."}
 
@@ -47,5 +53,8 @@ def lookup(conn, scrape_id, api_key, search=hunter.domain_search):
     outcome = "found" if contact else "none"
     if contact is None:
         contact = {"people_returned": len(people)}
+    if scrape.get("test_only"):
+        contact["TEST_ONLY"] = True
+        contact["do_not_email"] = True
     db.finish_contact(conn, scrape_id, outcome, contact)
     return 200, {"outcome": outcome, "contact": contact, "already": False, "usage": usage(conn)}

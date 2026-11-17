@@ -11,8 +11,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 
 HUNTER_DAILY_CAP = 2        # Hunter lookups per day (India time), for everyone together
+ANALYSIS_DAILY_CAP = 50     # AI company pictures per day (old rule: 10 runs x 5 domains)
+SEND_DAILY_CAP = 3          # review emails sent to the owner's own inbox per day
 CONTACT_KEEP_DAYS = 30      # saved contacts are deleted after this many days
 RECENT_RUNS = 20            # how many recent scrapes the page lists
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"   # checked against the key's model list before first live use
 
 
 def load_env(path=ROOT / ".env"):
@@ -42,11 +45,35 @@ def from_keychain(name):
     return out.stdout.strip() if out.returncode == 0 else ""
 
 
-def hunter_key():
+def secret(name):
     """Vercel: from its environment settings. This computer: from the Keychain (or .env as a fallback)."""
-    return os.environ.get("HUNTER_API_KEY", "").strip() or from_keychain("HUNTER_API_KEY")
+    return os.environ.get(name, "").strip() or from_keychain(name)
+
+
+def hunter_key():
+    return secret("HUNTER_API_KEY")
 
 
 def database_url():
-    """Vercel: from its environment settings. This computer: from the Keychain (or .env as a fallback)."""
-    return os.environ.get("DATABASE_URL", "").strip() or from_keychain("DATABASE_URL")
+    return secret("DATABASE_URL")
+
+
+def gemini_key():
+    return secret("GEMINI_API_KEY")
+
+
+def gemini_model():
+    return os.environ.get("GEMINI_MODEL", "").strip() or DEFAULT_GEMINI_MODEL
+
+
+def serper_key():
+    return secret("SERPER_API_KEY")
+
+
+def resend_key():
+    return secret("RESEND_API_KEY")
+
+
+def to_email():
+    """The ONLY address the app ever sends to: the owner's own inbox."""
+    return secret("TO_EMAIL")

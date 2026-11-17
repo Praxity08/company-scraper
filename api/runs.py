@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import db  # noqa: E402
+import pipeline  # noqa: E402
 import settings  # noqa: E402
 import webcommon  # noqa: E402
 
@@ -24,6 +25,8 @@ class handler(webcommon.BaseHandler):
                 scrape = db.get_scrape(conn, scrape_id)
                 if scrape is None:
                     return self.send_json(404, {"error": "That scrape was not found."})
-                return self.send_json(200, {"scrape": scrape, "contact": db.get_contact(conn, scrape_id)})
+                st = pipeline.state(conn, scrape_id)
+                return self.send_json(200, {"scrape": scrape, "contact": st["contact"],
+                                            "campaign": st["campaign"], "next": st["next"]})
         except Exception as e:
             return self.send_json(500, {"error": f"Database error ({type(e).__name__})"})

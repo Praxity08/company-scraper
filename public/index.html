@@ -60,6 +60,17 @@
   .contact .who { font-weight: 700; }
   .contact a { color: var(--accent); overflow-wrap: anywhere; }
   .err { color: var(--bad); font-size: 13px; }
+  label.check { display: flex; gap: 8px; align-items: baseline; font-weight: 600; margin-top: 10px; flex-wrap: wrap; }
+  .step { border-top: 1px solid var(--line); padding: 10px 0 4px; }
+  .step h3 { font-size: 14px; margin: 0 0 6px; }
+  .facts { margin: 0; padding-left: 18px; font-size: 14px; }
+  .facts li { margin: 4px 0; }
+  .quote { color: var(--muted); font-style: italic; }
+  .qrow { margin: 6px 0; font-size: 14px; }
+  .ans { font-weight: 700; text-transform: uppercase; font-size: 12px; padding: 1px 7px; border-radius: 999px; }
+  .ans-yes { background: var(--ok-bg); color: var(--ok); }
+  .ans-no { background: var(--bad-bg); color: var(--bad); }
+  .ans-unknown { background: var(--chip); color: var(--muted); }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
   th { color: var(--muted); font-weight: 600; font-size: 13px; }
@@ -79,6 +90,8 @@
   <div class="panel">
     <label for="domains">Domains (up to 5, one per line or separated by commas)</label>
     <textarea id="domains" placeholder="example.com&#10;another-company.io" spellcheck="false"></textarea>
+    <label class="check"><input type="checkbox" id="testonly"> TEST ONLY run
+      <span class="hint">(locked to these companies, labelled everywhere, "[TEST ONLY]" in email subjects; lets Hunter run on a No-Go for testing)</span></label>
     <div class="row">
       <button id="go">Scrape</button>
       <button id="download" class="ghost" disabled>Download JSON</button>
@@ -184,9 +197,94 @@ function renderContact(box, c) {
   box.append(el("div", { class: "u" }, "Do not email from here. This is research only."));
 }
 
-function renderCard(r, contact) {
+// ---------------------------------------------------------------- pipeline steps
+const FIELD_LABELS = {
+  company_name: "Name", what_they_do: "What they do", b2b_saas: "B2B SaaS?", funding_stage: "Funding",
+  team_size: "Team size", certification_held: "Certification held", certification_in_progress: "Certification in progress",
+  security_or_compliance_job: "Security / compliance job", open_role: "Open role", enterprise_plan: "Enterprise plan",
+  security_review: "Security reviews", named_customer: "Named customer", country_or_market: "Country / market",
+  recent_update: "Recent update",
+};
+const DECISION_CLASS = { "Go": "b-ok", "Flag": "b-warn", "No-Go": "b-bad" };
+
+function quoteLine(e) {
+  return el("div", { class: "u" }, el("span", { class: "quote" }, `“${e.quote}”`), " — ",
+    el("a", { href: e.source_url, target: "_blank", rel: "noopener noreferrer nofollow" }, e.from === "search" ? "search result" : "source"),
+    e.note ? ` · ${e.note}` : "", e.usable_as_hook === false ? " · never used as an email hook" : "");
+}
+
+function stepButton(card, r, step, label) {
+  const btn = el("button", { class: "small" }, label);
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    btn.replaceChildren(el("span", { class: "spinner" }), "Working…");
+    const st = await api("/api/step", { scrape_id: r.scrape_id, step });
+    if (st.error) {
+      btn.disabled = false; btn.textContent = label;
+      btn.after(el("div", { class: "err" }, st.error));
+      return;
+    }
+    card.replaceWith(renderCard(r, st));
+    loadUsage(); loadRecent();
+  });
+  return btn;
+}
+
+function renderSteps(card, r, st) {
+  const camp = st.campaign || {};
+  const box = el("div");
+
+  // Company picture
+  const p = el("div", { class: "step" }, el("h3", {}, "1 · Company picture"));
+  if (camp.picture) {
+    const list = el("ul", { class: "facts" });
+    for (const f of camp.picture.facts) {
+      list.append(el("li", {}, el("strong", {}, (FIELD_LABELS[f.field] || f.field) + ": "), f.value, quoteLine(f)));
+    }
+    if (!camp.picture.facts.length) p.append(el("div", { class: "u" }, "No facts could be quoted from the pages."));
+    p.append(list, el("div", { class: "u" }, `${camp.picture.rejected.length} AI statements rejected (quote not word for word on the page). Model: ${camp.picture.model || "?"}.`));
+    if (!camp.sent_at) p.append(stepButton(card, r, "picture", "Rebuild picture"));
+  } else {
+    p.append(el("div", { class: "u" }, "AI reads the saved pages and lists facts, each with an exact quote and link. About 30 seconds."),
+      stepButton(card, r, "picture", "Build company picture"));
+  }
+  box.append(p);
+
+  // Checks + decision
+  const c = el("div", { class: "step" }, el("h3", {}, "2 · Checks and decision"));
+  if (camp.checks) {
+    const k = camp.checks;
+    c.append(el("div", {}, el("span", { class: "badge " + (DECISION_CLASS[k.decision] || "") }, k.decision), " ", k.decision_reason));
+    for (const [key, label] of [["gate", "B2B SaaS"], ["q1", "Q1 Size (Series A-C)"], ["q2", "Q2 Audit prep"], ["q3", "Q3 Client pressure"]]) {
+      const a = k[key];
+      const row = el("div", { class: "qrow" }, el("span", { class: "ans ans-" + a.answer }, a.answer), ` ${label}: ${a.why}`);
+      a.evidence.forEach(e => row.append(quoteLine(e)));
+      c.append(row);
+    }
+    c.append(el("div", { class: "u" }, "Searches: " + k.searches.map(s => s.query ? `“${s.query}” → ${s.result}` : s.result).join(" · ")));
+    if (k.decision === "Flag" && !camp.flag_approved) {
+      c.append(el("div", { class: "u" }, "A Flag needs a human decision before Hunter can run."),
+        stepButton(card, r, "approve", "I approve this Flag"));
+    } else if (k.decision === "Flag") {
+      c.append(el("div", { class: "u" }, "Flag approved by a human."));
+    }
+    if (!camp.sent_at) c.append(stepButton(card, r, "check", "Re-run checks"));
+  } else if (camp.picture) {
+    c.append(el("div", { class: "u" }, "Applies the Evidence Map (gate, Q1, Q2, Q3). Searches the web at most twice if something is unknown. Up to about 2 minutes."),
+      stepButton(card, r, "check", "Run checks"));
+  } else {
+    c.append(el("div", { class: "u" }, "Needs the company picture first."));
+  }
+  box.append(c);
+  return box;
+}
+
+function renderCard(r, st) {
+  st = st || { contact: null, campaign: null, next: "picture" };
+  const contact = st.contact;
   const card = el("div", { class: "card" },
-    el("div", { class: "head" }, el("span", { class: "domain" }, r.domain || r.input || "?"), badge(r)));
+    el("div", { class: "head" }, el("span", { class: "domain" }, r.domain || r.input || "?"),
+      el("span", {}, r.test_only ? el("span", { class: "badge b-warn", style: "margin-right:6px" }, "TEST ONLY") : null, badge(r))));
 
   if (r.error) { card.append(el("div", { class: "meta" }, r.error)); }
   if (r.status === "skipped") { card.append(el("div", { class: "meta" }, r.reason || "")); return card; }
@@ -212,25 +310,40 @@ function renderCard(r, contact) {
     card.append(el("details", {}, el("summary", {}, el("span", { class: "u" }, "Run log")), el("pre", {}, r.log.join("\n"))));
   }
 
+  if (r.scrape_id) card.append(renderSteps(card, r, st));
+
   // Hunter
   const box = el("div", { class: "contact" });
+  const camp = st.campaign || {};
+  const hunterBlocked = !camp.decision ? "Run the checks first."
+    : (camp.decision === "No-Go" && !r.test_only) ? "No-Go: Hunter will not run (only a TEST ONLY run overrides this)."
+    : (camp.decision === "Flag" && !camp.flag_approved && !r.test_only) ? "Approve the Flag first." : "";
   if (r.scrape_id) {
+    const inner = el("div");
+    box.append(el("h3", { style: "font-size:14px;margin:0 0 6px" }, "3 · Contact (Hunter)"), inner);
     if (contact && contact.outcome && contact.outcome !== "pending") {
-      renderContact(box, contact);
+      renderContact(inner, contact);
     } else {
       const btn = el("button", { class: "small ghost" }, "Find contact with Hunter (uses 1 daily lookup)");
       btn.addEventListener("click", async () => {
         btn.disabled = true;
         btn.replaceChildren(el("span", { class: "spinner" }), "Asking Hunter…");
         const c = await api("/api/contact", { scrape_id: r.scrape_id });
-        r.contact = c;
-        renderContact(box, c);
-        if (c.error) { btn.disabled = false; btn.textContent = "Try again"; box.append(btn); }
+        if (c.error) {
+          btn.disabled = false; btn.textContent = "Try again";
+          btn.after(el("div", { class: "err" }, c.error));
+        } else {
+          const fresh = await api("/api/step", { scrape_id: r.scrape_id, step: "state" });
+          card.replaceWith(renderCard(r, fresh.error ? Object.assign({}, st, { contact: c }) : fresh));
+        }
         loadUsage(); loadRecent();
       });
-      box.append(btn);
+      if (hunterBlocked) inner.append(el("div", { class: "u" }, hunterBlocked)); else inner.append(btn);
     }
     card.append(box);
+    card.append(el("div", { class: "step" }, el("h3", {}, "4 · Pain points, email draft and send"),
+      el("div", { class: "u" }, "Coming next: waiting for the approved pain-point list and email wording. " +
+        "Emails will only ever go to the owner's own inbox for review, never to the contact.")));
   }
   return card;
 }
@@ -249,24 +362,26 @@ async function loadRecent() {
       const d = await api("/api/runs?id=" + encodeURIComponent(run.id));
       open.disabled = false;
       if (d.error) { $("progress").textContent = d.error; return; }
-      results = [Object.assign({}, d.scrape, { contact: d.contact })];
-      $("results").replaceChildren(renderCard(d.scrape, d.contact));
+      results = [Object.assign({}, d.scrape, { contact: d.contact, campaign: d.campaign })];
+      $("results").replaceChildren(renderCard(d.scrape, d));
       $("progress").textContent = `Opened saved run: ${run.domain}.`;
       $("download").disabled = false;
       $("progress").scrollIntoView({ behavior: "smooth" });
     });
     const contact = run.contact === "found" ? "found" : run.contact === "none" ? "none found" : "–";
+    const decision = run.decision ? el("span", { class: "badge " + (DECISION_CLASS[run.decision] || "") }, run.decision) : "–";
     tbody.append(el("tr", {},
-      el("td", {}, el("strong", {}, run.domain)),
+      el("td", {}, el("strong", {}, run.domain), run.test_only ? el("div", { class: "u" }, "TEST ONLY") : null),
       el("td", { class: "u" }, fmtTime(run.created_at)),
       el("td", {}, run.status),
       el("td", { class: "u" }, `${run.found.length} of 7 pages`),
+      el("td", {}, decision),
       el("td", { class: "u" }, contact),
       el("td", {}, open)));
   }
   box.className = "table-wrap";
   box.replaceChildren(el("table", {},
-    el("thead", {}, el("tr", {}, ...["Domain", "When", "Status", "Pages", "Contact", ""].map(h => el("th", {}, h)))),
+    el("thead", {}, el("tr", {}, ...["Domain", "When", "Status", "Pages", "Decision", "Contact", ""].map(h => el("th", {}, h)))),
     tbody));
 }
 
@@ -278,17 +393,17 @@ $("go").addEventListener("click", async () => {
     $("progress").textContent = `Please enter at most ${MAX_DOMAINS} domains (you entered ${domains.length}).`;
     return;
   }
-  $("go").disabled = true; $("download").disabled = true;
+  $("go").disabled = true; $("download").disabled = true; $("testonly").disabled = true;
   $("results").replaceChildren(); results = [];
   for (let i = 0; i < domains.length; i++) {
     $("progress").replaceChildren(el("span", { class: "spinner" }), `Scraping ${i + 1} of ${domains.length}: ${domains[i]} …`);
-    const r = await api("/api/scrape", { domain: domains[i] });
+    const r = await api("/api/scrape", { domain: domains[i], test_only: $("testonly").checked });
     if (!r.domain) r.input = domains[i];
     results.push(r);
     $("results").append(renderCard(r));
   }
   $("progress").textContent = `Done: ${domains.length} domain${domains.length > 1 ? "s" : ""}.`;
-  $("go").disabled = false; $("download").disabled = false;
+  $("go").disabled = false; $("download").disabled = false; $("testonly").disabled = false;
   loadRecent();
 });
 

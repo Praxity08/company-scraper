@@ -47,10 +47,11 @@ class handler(webcommon.BaseHandler):
         result["log"] = lines
 
         result["saved"] = False
+        result["test_only"] = bool(data.get("test_only"))   # chosen at run start, locked to this scrape
         if db.configured():
             try:
                 with db.connect() as conn:
-                    result["scrape_id"], saved_at = db.save_scrape(conn, result)
+                    result["scrape_id"], saved_at = db.save_scrape(conn, result, result["test_only"])
                 result["saved"] = True
                 result["saved_at"] = saved_at.isoformat()
             except Exception as e:

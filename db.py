@@ -47,12 +47,12 @@ def as_uuid(value):
 
 # ---------------------------------------------------------------- scrapes
 
-def save_scrape(conn, result):
+def save_scrape(conn, result, test_only=False):
     row = conn.execute(
-        sql.SQL("INSERT INTO {} (domain, status, found, missing, result) "
-                "VALUES (%s, %s, %s, %s, %s) RETURNING id, created_at").format(t("scrapes")),
+        sql.SQL("INSERT INTO {} (domain, status, found, missing, result, test_only) "
+                "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id, created_at").format(t("scrapes")),
         (result["domain"], result["status"], list(result.get("found", [])),
-         list(result.get("missing", [])), Jsonb(result)),
+         list(result.get("missing", [])), Jsonb(result), bool(test_only)),
     ).fetchone()
     return str(row["id"]), row["created_at"]
 
@@ -60,14 +60,16 @@ def save_scrape(conn, result):
 def list_scrapes(conn, limit):
     """Newest scrapes, without page text or contact details."""
     rows = conn.execute(
-        sql.SQL("SELECT s.id, s.created_at, s.domain, s.status, s.found, s.missing, c.outcome "
-                "FROM {} s LEFT JOIN {} c ON c.scrape_id = s.id "
-                "ORDER BY s.created_at DESC LIMIT %s").format(t("scrapes"), t("contacts")),
+        sql.SQL("SELECT s.id, s.created_at, s.domain, s.status, s.found, s.missing, s.test_only, c.outcome, "
+                "k.decision, (k.email IS NOT NULL) AS drafted, k.sent_at "
+                "FROM {} s LEFT JOIN {} c ON c.scrape_id = s.id LEFT JOIN {} k ON k.scrape_id = s.id "
+                "ORDER BY s.created_at DESC LIMIT %s").format(t("scrapes"), t("contacts"), t("campaign")),
         (limit,),
     ).fetchall()
     return [{"id": str(r["id"]), "created_at": r["created_at"].isoformat(), "domain": r["domain"],
              "status": r["status"], "found": r["found"], "missing": r["missing"],
-             "contact": r["outcome"]} for r in rows]
+             "test_only": r["test_only"], "contact": r["outcome"], "decision": r["decision"],
+             "drafted": r["drafted"], "sent": r["sent_at"] is not None} for r in rows]
 
 
 def get_scrape(conn, scrape_id):
@@ -75,13 +77,14 @@ def get_scrape(conn, scrape_id):
     if sid is None:
         return None
     row = conn.execute(
-        sql.SQL("SELECT id, created_at, result FROM {} WHERE id = %s").format(t("scrapes")), (sid,)
+        sql.SQL("SELECT id, created_at, result, test_only FROM {} WHERE id = %s").format(t("scrapes")), (sid,)
     ).fetchone()
     if not row:
         return None
     result = dict(row["result"])
     result["scrape_id"] = str(row["id"])
     result["saved_at"] = row["created_at"].isoformat()
+    result["test_only"] = row["test_only"]
     return result
 
 
@@ -161,3 +164,64 @@ def count(conn, name):
         sql.SQL("SELECT n FROM {} WHERE day = {} AND name = %s").format(t("counters"), IST_TODAY), (name,)
     ).fetchone()
     return row["n"] if row else 0
+
+
+# ---------------------------------------------------------------- campaign record
+
+CAMPAIGN_FIELDS = {"picture", "checks", "decision", "flag_approved", "pain", "email"}
+JSON_FIELDS = {"picture", "checks", "pain", "email"}
+
+
+def get_campaign(conn, scrape_id):
+    """The campaign record for a scrape, or None. Dates are ISO strings."""
+    sid = as_uuid(scrape_id)
+    if sid is None:
+        return None
+    row = conn.execute(sql.SQL("SELECT * FROM {} WHERE scrape_id = %s").format(t("campaign")), (sid,)).fetchone()
+    if not row:
+        return None
+    out = dict(row)
+    out["scrape_id"] = str(out["scrape_id"])
+    for k in ("updated_at", "sent_at"):
+        out[k] = out[k].isoformat() if out[k] else None
+    return out
+
+
+def update_campaign(conn, scrape_id, domain, **fields):
+    """Create the record if needed, then set the given fields (only known columns)."""
+    bad = set(fields) - CAMPAIGN_FIELDS
+    if bad:
+        raise ValueError(f"unknown campaign fields: {sorted(bad)}")
+    cols = list(fields)
+    vals = [Jsonb(fields[c]) if c in JSON_FIELDS and fields[c] is not None else fields[c] for c in cols]
+    insert_cols = sql.SQL(", ").join(sql.Identifier(c) for c in ["scrape_id", "domain"] + cols)
+    placeholders = sql.SQL(", ").join(sql.Placeholder() for _ in range(2 + len(cols)))
+    updates = sql.SQL(", ").join(
+        [sql.SQL("{} = EXCLUDED.{}").format(sql.Identifier(c), sql.Identifier(c)) for c in cols]
+        + [sql.SQL("updated_at = now()")])
+    conn.execute(
+        sql.SQL("INSERT INTO {} ({}) VALUES ({}) ON CONFLICT (scrape_id) DO UPDATE SET {}").format(
+            t("campaign"), insert_cols, placeholders, updates),
+        [as_uuid(scrape_id), domain] + vals,
+    )
+
+
+def mark_sent(conn, scrape_id):
+    """Set sent_at once. False if it was already sent (never twice)."""
+    row = conn.execute(
+        sql.SQL("UPDATE {} SET sent_at = now(), updated_at = now() "
+                "WHERE scrape_id = %s AND sent_at IS NULL RETURNING scrape_id").format(t("campaign")),
+        (as_uuid(scrape_id),),
+    ).fetchone()
+    return row is not None
+
+
+def save_send_result(conn, scrape_id, result):
+    conn.execute(sql.SQL("UPDATE {} SET send_result = %s WHERE scrape_id = %s").format(t("campaign")),
+                 (Jsonb(result), as_uuid(scrape_id)))
+
+
+def unmark_sent(conn, scrape_id):
+    """Only after Resend clearly refused the email (nothing was sent)."""
+    conn.execute(sql.SQL("UPDATE {} SET sent_at = NULL WHERE scrape_id = %s").format(t("campaign")),
+                 (as_uuid(scrape_id),))

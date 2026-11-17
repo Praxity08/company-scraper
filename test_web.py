@@ -5,13 +5,12 @@ The database tests run only when DATABASE_URL is set (from .env). They work insi
 own throw-away schema named test_<random> and drop only that schema; they never touch public.
 Hunter is never called for real: a fake search function is used.
 """
-import os
-import secrets
 import unittest
 from unittest import mock
 
 import hunter
 import settings
+import testutil
 
 settings.load_env()
 FAKE_KEY = "fake-key-1234567890"
@@ -81,43 +80,14 @@ class TestHunterCall(unittest.TestCase):
 
 
 @unittest.skipUnless(settings.database_url(), "DATABASE_URL not set: database tests skipped")
-class TestDatabaseFlow(unittest.TestCase):
+class TestDatabaseFlow(testutil.SchemaMixin, unittest.TestCase):
     """Runs against Neon inside a throw-away schema."""
-
-    @classmethod
-    def setUpClass(cls):
-        import db
-        cls.db = db
-        cls.schema = "test_" + secrets.token_hex(4)
-        assert cls.schema.startswith("test_")
-        cls.old_schema = db.SCHEMA
-        cls.conn = db.connect()
-        cls.conn.execute(f'CREATE SCHEMA "{cls.schema}"')
-        try:
-            text = "\n".join(line for line in open(settings.ROOT / "schema.sql", encoding="utf-8").read().splitlines()
-                             if not line.strip().startswith("--"))
-            statements = [s for s in text.split(";") if s.strip()]
-            with cls.conn.transaction():
-                cls.conn.execute(f'SET LOCAL search_path TO "{cls.schema}"')
-                for s in statements:
-                    cls.conn.execute(s)
-        except Exception:
-            cls.conn.execute(f'DROP SCHEMA "{cls.schema}" CASCADE')   # never leave a test schema behind
-            cls.conn.close()
-            raise
-        db.SCHEMA = cls.schema
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.db.SCHEMA = cls.old_schema
-        assert cls.schema.startswith("test_")
-        cls.conn.execute(f'DROP SCHEMA "{cls.schema}" CASCADE')
-        cls.conn.close()
 
     def new_scrape(self, domain="fake-co.com"):
         result = {"domain": domain, "status": "ok", "found": ["homepage"], "missing": ["pricing"],
                   "pages": {"homepage": {"text": "Fake Co helps teams."}}}
         sid, _ = self.db.save_scrape(self.conn, result)
+        self.db.update_campaign(self.conn, sid, domain, decision="Go")
         return sid
 
     def fake_search(self, people):

@@ -2,21 +2,10 @@
   "framework": null,
   "regions": ["sin1"],
   "functions": {
-    "api/scrape.py": {
-      "maxDuration": 120,
-      "includeFiles": "{scraper.py,db.py,settings.py,webcommon.py,docs/do-not-contact.txt}"
-    },
-    "api/contact.py": {
-      "maxDuration": 60,
-      "includeFiles": "{scraper.py,db.py,settings.py,webcommon.py,hunter.py,contactflow.py,docs/do-not-contact.txt}"
-    },
-    "api/runs.py": {
-      "maxDuration": 30,
-      "includeFiles": "{db.py,settings.py,webcommon.py}"
-    },
-    "api/usage.py": {
-      "maxDuration": 30,
-      "includeFiles": "{scraper.py,db.py,settings.py,webcommon.py,hunter.py,contactflow.py,docs/do-not-contact.txt}"
-    }
+    "api/scrape.py":  { "maxDuration": 120, "includeFiles": "{*.py,docs/do-not-contact.txt}" },
+    "api/step.py":    { "maxDuration": 300, "includeFiles": "{*.py,docs/do-not-contact.txt}" },
+    "api/contact.py": { "maxDuration": 60,  "includeFiles": "{*.py,docs/do-not-contact.txt}" },
+    "api/runs.py":    { "maxDuration": 30,  "includeFiles": "{*.py,docs/do-not-contact.txt}" },
+    "api/usage.py":   { "maxDuration": 30,  "includeFiles": "{*.py,docs/do-not-contact.txt}" }
   }
 }

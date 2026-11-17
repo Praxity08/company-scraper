@@ -32,3 +32,24 @@ CREATE TABLE IF NOT EXISTS counters (
   n integer NOT NULL DEFAULT 0,
   PRIMARY KEY (day, name)
 );
+
+-- TEST ONLY is chosen when a run starts and is locked to the scrape.
+ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS test_only boolean NOT NULL DEFAULT false;
+
+-- The campaign record: one row per scrape, filled step by step.
+-- picture = company facts (each with URL + exact quote); checks = gate/Q1/Q2/Q3 with evidence;
+-- decision = Go / No-Go / Flag; flag_approved = a human approved a Flag;
+-- pain = chosen pain points; email = the draft and its hooks; sent_at = set once, never twice.
+CREATE TABLE IF NOT EXISTS campaign (
+  scrape_id uuid PRIMARY KEY REFERENCES scrapes(id) ON DELETE CASCADE,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  domain text NOT NULL,
+  picture jsonb,
+  checks jsonb,
+  decision text CHECK (decision IN ('Go', 'No-Go', 'Flag')),
+  flag_approved boolean NOT NULL DEFAULT false,
+  pain jsonb,
+  email jsonb,
+  sent_at timestamptz,
+  send_result jsonb
+);

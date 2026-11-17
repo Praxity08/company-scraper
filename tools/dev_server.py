@@ -14,7 +14,7 @@ import webcommon  # noqa: E402  (also loads .env)
 
 PORT = 8780
 ROUTES = {f"/api/{name}": importlib.import_module(f"api.{name}").handler
-          for name in ("scrape", "contact", "runs", "usage")}
+          for name in ("scrape", "step", "contact", "runs", "usage")}
 
 
 class DevHandler(webcommon.BaseHandler):
