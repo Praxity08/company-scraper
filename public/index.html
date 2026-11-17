@@ -71,6 +71,10 @@
   .ans-yes { background: var(--ok-bg); color: var(--ok); }
   .ans-no { background: var(--bad-bg); color: var(--bad); }
   .ans-unknown { background: var(--chip); color: var(--muted); }
+  .status { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 10px 0 4px; font-size: 14px; }
+  .status ul { margin: 4px 0 0; padding-left: 18px; }
+  input.cmd { font: 14px var(--mono); padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line);
+              background: var(--bg); color: var(--text); width: min(100%, 360px); }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
   th { color: var(--muted); font-weight: 600; font-size: 13px; }
@@ -84,7 +88,7 @@
 <body>
 <main>
   <h1>Company Scraper</h1>
-  <p class="sub">Reads a company's own website and pulls out its homepage, pricing, about, careers, security, customers and press pages. Optionally finds one contact with Hunter.</p>
+  <p class="sub">Reads a company's own website, builds a quoted picture of the company, decides Go / No-Go / Flag, finds one contact with Hunter, picks pain points and drafts an email that goes only to your own inbox for review.</p>
   <p class="usage" id="usage">&nbsp;</p>
 
   <div class="panel">
@@ -105,7 +109,7 @@
   <h2>Recent runs</h2>
   <div id="recent" class="hint">Loading…</div>
 
-  <footer>Nobody is ever emailed from this page. LinkedIn is never visited. Companies on the do-not-contact list are skipped.
+  <footer>No prospect is ever emailed from this page: drafts go only to your own inbox. LinkedIn is never visited. Companies on the do-not-contact list are skipped.
     Hunter contacts are deleted after 30 days.</footer>
 </main>
 
@@ -213,12 +217,13 @@ function quoteLine(e) {
     e.note ? ` · ${e.note}` : "", e.usable_as_hook === false ? " · never used as an email hook" : "");
 }
 
-function stepButton(card, r, step, label) {
+function stepButton(card, r, step, label, extra) {
   const btn = el("button", { class: "small" }, label);
   btn.addEventListener("click", async () => {
     btn.disabled = true;
     btn.replaceChildren(el("span", { class: "spinner" }), "Working…");
-    const st = await api("/api/step", { scrape_id: r.scrape_id, step });
+    if (btn.nextSibling && btn.nextSibling.classList && btn.nextSibling.classList.contains("err")) btn.nextSibling.remove();
+    const st = await api("/api/step", Object.assign({ scrape_id: r.scrape_id, step }, extra ? extra() : {}));
     if (st.error) {
       btn.disabled = false; btn.textContent = label;
       btn.after(el("div", { class: "err" }, st.error));
@@ -233,6 +238,11 @@ function stepButton(card, r, step, label) {
 function renderSteps(card, r, st) {
   const camp = st.campaign || {};
   const box = el("div");
+  if (st.status) {
+    const s = el("div", { class: "status" }, el("strong", {}, "Status: "), st.status);
+    if (st.next_steps && st.next_steps.length) s.append(el("ul", {}, ...st.next_steps.map(t => el("li", {}, t))));
+    box.append(s);
+  }
 
   // Company picture
   const p = el("div", { class: "step" }, el("h3", {}, "1 · Company picture"));
@@ -341,11 +351,85 @@ function renderCard(r, st) {
       if (hunterBlocked) inner.append(el("div", { class: "u" }, hunterBlocked)); else inner.append(btn);
     }
     card.append(box);
-    card.append(el("div", { class: "step" }, el("h3", {}, "4 · Pain points, email draft and send"),
-      el("div", { class: "u" }, "Coming next: waiting for the approved pain-point list and email wording. " +
-        "Emails will only ever go to the owner's own inbox for review, never to the contact.")));
+    card.append(renderOutreach(card, r, st));
   }
   return card;
+}
+
+function renderOutreach(card, r, st) {
+  const camp = st.campaign || {};
+  const found = st.contact && st.contact.outcome === "found";
+  const box = el("div");
+
+  // 4 · Pain points
+  const p = el("div", { class: "step" }, el("h3", {}, "4 · Pain points"));
+  if (camp.pain) {
+    p.append(el("div", { class: "u" }, `Group: ${camp.pain.group_name}. ${camp.pain.why}` +
+      (camp.pain.list_status !== "APPROVED" ? " (list is still a DRAFT)" : "")));
+    const list = el("ul", { class: "facts" });
+    for (const x of camp.pain.picked) {
+      const li = el("li", {}, el("strong", {}, x.id + ": "), x.pain, el("div", { class: "u" }, x.note));
+      (x.evidence || []).forEach(e => li.append(quoteLine(e)));
+      list.append(li);
+    }
+    p.append(list);
+    if (!camp.sent_at) p.append(stepButton(card, r, "pain", "Pick again"));
+  } else if (found && st.next === "pain") {
+    p.append(el("div", { class: "u" }, "Picks up to 2 from your list for the contact's role. Typical challenges for the role, never claims about the company. No AI."),
+      stepButton(card, r, "pain", "Pick pain points"));
+  } else {
+    p.append(el("div", { class: "u" }, st.contact && st.contact.outcome === "none"
+      ? "No contact was found, so this stops here." : "Comes after the steps above (a found contact and a decision that allows outreach)."));
+  }
+  box.append(p);
+
+  // 5 · Email draft
+  const d = el("div", { class: "step" }, el("h3", {}, "5 · Email draft"));
+  const em = camp.email;
+  if (em) {
+    if (!em.hooks.length) {
+      d.append(el("div", { class: "err" }, "No hook found, so no email. Nothing on the company's own pages passed the hook rules."));
+    } else {
+      d.append(el("div", { class: "u" }, `Subject: `, el("strong", {}, em.subject), ` · ${em.words} words · hook ${em.hook_n}` +
+        (em.wording_status !== "APPROVED" ? " · wording is still a DRAFT" : "")),
+        el("pre", {}, em.body));
+      const hl = el("ol", { class: "facts" });
+      em.hooks.forEach(h => hl.append(el("li", { value: h.n }, el("span", { class: "quote" }, `“${h.quote}”`), " — ",
+        el("a", { href: h.source_url, target: "_blank", rel: "noopener noreferrer nofollow" }, "source"),
+        h.topics.length ? el("span", { class: "u" }, " · " + h.topics.join(", ")) : null)));
+      d.append(el("div", { class: "u", style: "margin-top:8px" }, "Hooks that passed every rule (pick one when sending):"), hl);
+    }
+    if (em.rejected_hooks && em.rejected_hooks.length) {
+      d.append(el("details", {}, el("summary", {}, el("span", { class: "u" }, `${em.rejected_hooks.length} hooks rejected`)),
+        el("ul", { class: "facts" }, ...em.rejected_hooks.map(h => el("li", { class: "u" }, `“${h.quote}” — ${h.reason}`)))));
+    }
+    if (!camp.sent_at) d.append(stepButton(card, r, "draft", "Draft again (uses 1 AI step)"));
+  } else if (camp.pain) {
+    d.append(el("div", { class: "u" }, "AI suggests hook quotes from the company's own pages; code checks them and fills your fixed template. About 30 seconds."),
+      stepButton(card, r, "draft", "Draft email"));
+  } else {
+    d.append(el("div", { class: "u" }, "Needs the pain points first."));
+  }
+  box.append(d);
+
+  // 6 · Send to my inbox
+  const s = el("div", { class: "step" }, el("h3", {}, "6 · Send to my inbox"));
+  if (camp.sent_at) {
+    const res = camp.send_result || {};
+    s.append(el("div", {}, res.ok ? el("span", { class: "badge b-ok" }, "delivered") : el("span", { class: "badge b-warn" }, "unclear"),
+      ` Sent ${fmtTime(camp.sent_at)} to your own inbox with hook ${res.hook}. ` + (res.ok ? "Logged." : (res.error || ""))));
+  } else if (em && em.hooks.length) {
+    const want = `send ${r.domain}, hook ${em.hook_n}`;
+    const input = el("input", { class: "cmd", type: "text", placeholder: want, spellcheck: "false", autocomplete: "off" });
+    s.append(el("div", { class: "u" }, `Goes ONLY to your own inbox (never the contact), once, plain text. To send, type exactly: `,
+      el("code", {}, want), " (or another hook number)."),
+      el("div", { class: "row" }, input, stepButton(card, r, "send", "Send to my inbox", () => ({ command: input.value }))));
+    if (camp.send_result && camp.send_result.ok === false) s.append(el("div", { class: "err" }, "Last try failed: " + camp.send_result.error));
+  } else {
+    s.append(el("div", { class: "u" }, "Needs a draft with a hook first."));
+  }
+  box.append(s);
+  return box;
 }
 
 // ---------------------------------------------------------------- recent runs
@@ -377,11 +461,12 @@ async function loadRecent() {
       el("td", { class: "u" }, `${run.found.length} of 7 pages`),
       el("td", {}, decision),
       el("td", { class: "u" }, contact),
+      el("td", { class: "u" }, run.sent ? "sent to you" : run.drafted ? "drafted" : "–"),
       el("td", {}, open)));
   }
   box.className = "table-wrap";
   box.replaceChildren(el("table", {},
-    el("thead", {}, el("tr", {}, ...["Domain", "When", "Status", "Pages", "Decision", "Contact", ""].map(h => el("th", {}, h)))),
+    el("thead", {}, el("tr", {}, ...["Domain", "When", "Status", "Pages", "Decision", "Contact", "Email", ""].map(h => el("th", {}, h)))),
     tbody));
 }
 

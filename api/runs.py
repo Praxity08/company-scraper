@@ -27,6 +27,7 @@ class handler(webcommon.BaseHandler):
                     return self.send_json(404, {"error": "That scrape was not found."})
                 st = pipeline.state(conn, scrape_id)
                 return self.send_json(200, {"scrape": scrape, "contact": st["contact"],
-                                            "campaign": st["campaign"], "next": st["next"]})
+                                            "campaign": st["campaign"], "next": st["next"],
+                                            "status": st["status"], "next_steps": st["next_steps"]})
         except Exception as e:
             return self.send_json(500, {"error": f"Database error ({type(e).__name__})"})

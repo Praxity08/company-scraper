@@ -61,14 +61,18 @@ SCHEMA = {
 }
 
 
-def build_prompt(scrape):
-    lines = ["Fields to look for:"]
-    lines += [f"- {name}: {desc}" for name, desc in FIELDS.items()]
-    lines.append("\nPages (each starts with its type and URL):")
+def pages_text(scrape):
+    lines = ["Pages (each starts with its type and URL):"]
     for ptype, page in scrape["pages"].items():
         if page and page.get("text"):
             lines.append(f"\n=== PAGE: {ptype} | URL: {page['url']} ===\n{page['text']}")
     return "\n".join(lines)
+
+
+def build_prompt(scrape):
+    lines = ["Fields to look for:"]
+    lines += [f"- {name}: {desc}" for name, desc in FIELDS.items()]
+    return "\n".join(lines) + "\n\n" + pages_text(scrape)
 
 
 def build(scrape, ai):

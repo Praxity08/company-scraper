@@ -1,11 +1,28 @@
 {
   "framework": null,
-  "regions": ["sin1"],
+  "regions": [
+    "sin1"
+  ],
   "functions": {
-    "api/scrape.py":  { "maxDuration": 120, "includeFiles": "{*.py,docs/do-not-contact.txt}" },
-    "api/step.py":    { "maxDuration": 300, "includeFiles": "{*.py,docs/do-not-contact.txt}" },
-    "api/contact.py": { "maxDuration": 60,  "includeFiles": "{*.py,docs/do-not-contact.txt}" },
-    "api/runs.py":    { "maxDuration": 30,  "includeFiles": "{*.py,docs/do-not-contact.txt}" },
-    "api/usage.py":   { "maxDuration": 30,  "includeFiles": "{*.py,docs/do-not-contact.txt}" }
+    "api/scrape.py": {
+      "maxDuration": 120,
+      "includeFiles": "{*.py,docs/do-not-contact.txt,docs/pain-points.md,docs/email-settings.md}"
+    },
+    "api/step.py": {
+      "maxDuration": 300,
+      "includeFiles": "{*.py,docs/do-not-contact.txt,docs/pain-points.md,docs/email-settings.md}"
+    },
+    "api/contact.py": {
+      "maxDuration": 60,
+      "includeFiles": "{*.py,docs/do-not-contact.txt,docs/pain-points.md,docs/email-settings.md}"
+    },
+    "api/runs.py": {
+      "maxDuration": 30,
+      "includeFiles": "{*.py,docs/do-not-contact.txt,docs/pain-points.md,docs/email-settings.md}"
+    },
+    "api/usage.py": {
+      "maxDuration": 30,
+      "includeFiles": "{*.py,docs/do-not-contact.txt,docs/pain-points.md,docs/email-settings.md}"
+    }
   }
 }
