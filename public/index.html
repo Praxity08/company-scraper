@@ -13,6 +13,12 @@
   try { const t = localStorage.getItem("piq-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
 <style>
+  /* Backup copy of Geist (same files, from the geist npm package on jsDelivr) in case Google Fonts is blocked */
+  @font-face { font-family: "Geist CDN"; font-weight: 400; font-display: swap; src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Regular.woff2") format("woff2"); }
+  @font-face { font-family: "Geist CDN"; font-weight: 500; font-display: swap; src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Medium.woff2") format("woff2"); }
+  @font-face { font-family: "Geist CDN"; font-weight: 600; font-display: swap; src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-SemiBold.woff2") format("woff2"); }
+  @font-face { font-family: "Geist Mono CDN"; font-weight: 400; font-display: swap; src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Regular.woff2") format("woff2"); }
+  @font-face { font-family: "Geist Mono CDN"; font-weight: 500; font-display: swap; src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Medium.woff2") format("woff2"); }
   :root {
     --bg: #F7F6F3; --surface: #FFFFFF; --ink: #17171A; --muted: #6B6B73; --faint: #9C9CA4;
     --line: #E8E6E1; --line2: #D6D3CC; --soft: #F3F1ED; --accent: #17171A; --accent-ink: #FFFFFF;
@@ -21,8 +27,8 @@
     --test-bg: #ECE6F6; --test-ink: #5A3D8A; --neutral-bg: #EFEDE8; --neutral-ink: #55555C;
     --link: #2C4A80; --wash-opacity: .30; --wash-blend: normal;
     --r: 12px; --rb: 8px;
-    --sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
-    --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "Geist", "Geist CDN", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Geist Mono", "Geist Mono CDN", ui-monospace, SFMono-Regular, Menlo, monospace;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
@@ -53,11 +59,13 @@
   .muted { color: var(--muted); }
   .faint { color: var(--faint); }
   .label { font: 500 10.5px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
-  .hidden { display: none !important; }
+  .hidden, .view-off { display: none !important; }
 
   /* ---------- background washes ---------- */
   #washes { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
-            opacity: var(--wash-opacity); mix-blend-mode: var(--wash-blend); }
+            opacity: var(--wash-opacity); mix-blend-mode: var(--wash-blend); --fade-end: 200vh;
+            -webkit-mask-image: linear-gradient(to bottom, #000 calc(var(--fade-end) - 180px), transparent var(--fade-end));
+            mask-image: linear-gradient(to bottom, #000 calc(var(--fade-end) - 180px), transparent var(--fade-end)); }
   .wash { position: absolute; left: 0; width: 900px; height: 900px; margin-left: -450px;
           animation: drift 33s linear infinite; }
   .wash i { display: block; width: 100%; height: 100%; border-radius: 50%; animation: bob var(--bob) ease-in-out infinite alternate;
@@ -298,6 +306,48 @@
 
   footer { color: var(--muted); font-size: 12.5px; padding: 6px 2px 0; }
 
+  /* ---------- how it works ---------- */
+  .guide { display: flex; flex-direction: column; gap: 18px; }
+  .g-hero { padding: 22px 24px; display: flex; flex-direction: column; gap: 10px; }
+  .g-hero h2 { font-size: 24px; font-weight: 600; letter-spacing: -.02em; margin: 0; max-width: 760px; line-height: 1.25; }
+  .g-hero p { margin: 0; color: var(--muted); font-size: 14.5px; max-width: 760px; }
+  .g-hero p b { color: var(--ink); font-weight: 500; }
+  .g-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .flow { list-style: none; margin: 0; padding: 16px 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; counter-reset: none; }
+  .flow li { border: 1px solid var(--line); border-radius: var(--rb); padding: 12px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+  .flow .fn { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--ink); display: grid; place-items: center; font-size: 11px; margin-bottom: 4px; }
+  .flow b { font-weight: 500; font-size: 14px; }
+  .flow span { font-size: 12.5px; color: var(--muted); }
+  .who-tag { align-self: flex-start; font: 500 10.5px/1.4 var(--mono) !important; letter-spacing: .04em; padding: 2px 7px; border-radius: 6px; margin-top: 2px; }
+  .t-code { background: var(--neutral-bg); color: var(--neutral-ink) !important; }
+  .t-ai { background: var(--info-bg); color: var(--info-ink) !important; }
+  .t-you { background: var(--flag-bg); color: var(--flag-ink) !important; }
+  .g-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+  .g-step { padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .g-step h3 { font-size: 17px; font-weight: 600; letter-spacing: -.01em; margin: 0; }
+  .g-step p { margin: 0; font-size: 13.5px; color: var(--muted); }
+  .g-step ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: flex; flex-direction: column; gap: 4px; }
+  .g-step b { font-weight: 500; color: var(--ink); }
+  .cost-line { margin-top: auto !important; padding-top: 6px; font: 12px var(--mono) !important; color: var(--faint) !important; }
+  .g-table td { vertical-align: top; font-size: 13.5px; }
+  .g-table { min-width: 720px; }
+  @media (max-width: 640px) {
+    .g-table { min-width: 0; }
+    .g-table thead { display: none; }
+    .g-table tr { display: block; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+    .g-table td { display: block; padding: 2px 0; border: 0; }
+    .g-table td[data-l]::before { content: attr(data-l) " "; color: var(--muted); font-size: 12px; }
+  }
+  .g-decisions { display: flex; flex-direction: column; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--line); font-size: 13.5px; }
+  .g-decisions .badge { min-width: 52px; justify-content: center; margin-right: 6px; }
+  .legend { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; }
+  .legend .badge { margin-right: 4px; }
+  .faq { padding: 6px 18px 12px; }
+  .faq details { border-bottom: 1px solid var(--line); padding: 12px 0; }
+  .faq details:last-child { border-bottom: none; }
+  .faq summary { cursor: pointer; font-weight: 500; }
+  .faq p { margin: 8px 0 0; color: var(--muted); font-size: 13.5px; max-width: 760px; }
+
   /* ---------- narrow screens: sidebar becomes a top bar ---------- */
   @media (max-width: 760px) {
     .app { flex-direction: column; }
@@ -334,6 +384,8 @@
       <button data-sec="sec-run">This run <span class="n" id="navRunN">0</span></button>
       <button data-sec="sec-work">Workspace</button>
       <button data-sec="sec-recent">Recent runs <span class="n" id="navRecentN">0</span></button>
+      <div style="height:8px"></div>
+      <button data-view="guide">How it works</button>
     </nav>
     <div class="side-sec side-collapse">
       <div class="label">Companies</div>
@@ -357,6 +409,158 @@
 
     <div id="dbBanner" class="banner b-nogo hidden">Saving is switched off — nothing is saved and every step after scraping is unavailable.</div>
 
+    <section id="sec-guide" class="guide hidden" aria-label="How it works">
+      <div class="card g-hero">
+        <div class="label">How it works</div>
+        <h2>From a website to a reviewed draft email, one careful step at a time</h2>
+        <p>You type up to 5 company websites. For each one, the tool reads the company's own pages, writes down only facts
+          it can quote word for word, decides whether the company is worth contacting, finds one person, picks what to talk
+          about, and drafts an email. <b>The draft only ever goes to your own inbox.</b> Nothing is ever sent to the company.</p>
+        <div class="g-actions">
+          <button class="btn" id="guideSample">See it with sample data</button>
+          <button class="btn sec" id="guideStart">Start a new run</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>The seven steps</h2><div class="sub">Each step needs one click, in order. Nothing runs by itself.</div></div>
+        <ol class="flow">
+          <li><span class="fn mono">0</span><b>Scrape</b><span>Reads the website</span><span class="who-tag t-code">Code</span></li>
+          <li><span class="fn mono">1</span><b>Company picture</b><span>Facts with quotes</span><span class="who-tag t-ai">AI suggests · code checks</span></li>
+          <li><span class="fn mono">2</span><b>Checks &amp; decision</b><span>Go / Flag / No-Go</span><span class="who-tag t-code">Code</span><span class="who-tag t-you">You approve a Flag</span></li>
+          <li><span class="fn mono">3</span><b>Contact</b><span>One person, via Hunter</span><span class="who-tag t-code">Code</span></li>
+          <li><span class="fn mono">4</span><b>Pain points</b><span>Up to 2, from your list</span><span class="who-tag t-code">Code · no AI</span></li>
+          <li><span class="fn mono">5</span><b>Email draft</b><span>Hook + your template</span><span class="who-tag t-ai">AI suggests · code checks</span></li>
+          <li><span class="fn mono">6</span><b>Send to my inbox</b><span>Only to you</span><span class="who-tag t-you">You type the command</span></li>
+        </ol>
+      </div>
+
+      <div class="g-grid">
+        <div class="card g-step"><div class="label">Step 0</div><h3>Scrape</h3>
+          <p>Reads the company's own website and keeps the text of up to 7 pages: homepage, pricing, about, careers, security, customers and press.</p>
+          <ul><li>Polite: a 1–2 second pause between requests, and the site's robots.txt rules are respected.</li>
+            <li>LinkedIn is never visited. Companies on the do-not-contact list are skipped and nothing is fetched.</li>
+            <li>A missing page says why: no such page (404), blocked, redirected to the homepage, or JavaScript-only.</li></ul>
+          <p class="cost-line">About 20 seconds per website · free</p></div>
+
+        <div class="card g-step"><div class="label">Step 1</div><h3>Company picture</h3>
+          <p>The AI (Gemini) reads the saved pages and lists facts: what they do, funding, team size, certifications, open jobs, enterprise plans, named customers, countries.</p>
+          <ul><li>Every fact must come with the page link and an <b>exact quote</b>. Code checks the quote word for word against the page.</li>
+            <li>Anything that doesn't match is thrown away and counted as "rejected". Missing means unknown — nothing is guessed.</li></ul>
+          <p class="cost-line">About 30 seconds · 1 of 50 AI steps a day</p></div>
+
+        <div class="card g-step"><div class="label">Step 2</div><h3>Checks &amp; decision</h3>
+          <p>Fixed rules (the Evidence Map) answer four questions from the quoted facts. If a key detail is unknown, it may run up to 2 web searches: one for the funding round and one for "[company] data breach".</p>
+          <ul><li><b>Go</b>: carry on. <b>Flag</b>: you must read the evidence and click approve. <b>No-Go</b>: stop.</li>
+            <li>A search result only counts if its quote is word for word in the result.</li></ul>
+          <p class="cost-line">Up to ~2 minutes · up to 2 searches</p></div>
+
+        <div class="card g-step"><div class="label">Step 3</div><h3>Contact</h3>
+          <p>Hunter looks up people at the company's domain and the tool picks one, in this order: security / CISO / compliance / GRC, then CTO / head of engineering, then a founder.</p>
+          <ul><li>Only after a Go, or a Flag you approved. A No-Go never gets a lookup (except on a TEST ONLY run).</li>
+            <li>One lookup per company, ever. Confidence under 80 shows <b>LOW CONFIDENCE</b>. Contacts are deleted after 30 days.</li></ul>
+          <p class="cost-line">A few seconds · 1 of 2 Hunter lookups a day (shared)</p></div>
+
+        <div class="card g-step"><div class="label">Step 4</div><h3>Pain points</h3>
+          <p>Picks up to 2 typical challenges for the contact's role from your list (<span class="mono">docs/pain-points.md</span>): security people, engineering leaders or founders.</p>
+          <ul><li>They are typical for the role, never claims about the company.</li>
+            <li>Some only count when the company's own site shows a matching fact (an open compliance job, a team size, or a certification in progress).</li></ul>
+          <p class="cost-line">Instant · no AI · free</p></div>
+
+        <div class="card g-step"><div class="label">Step 5</div><h3>Email draft</h3>
+          <p>The AI only suggests opening lines ("hooks"). Code checks each one, and your fixed wording (<span class="mono">docs/email-settings.md</span>) writes the rest.</p>
+          <ul><li>A hook must be word for word from the company's own pages and 4–30 words long.</li>
+            <li>Banned: funding words, negative news, menu or button text, image text. No hook means no email.</li>
+            <li>The draft aims for 80–100 words.</li></ul>
+          <p class="cost-line">About 30 seconds · 1 of 50 AI steps a day</p></div>
+
+        <div class="card g-step"><div class="label">Step 6</div><h3>Send to my inbox</h3>
+          <p>Sends the draft as plain text to <b>your own inbox only</b>, with a review header at the top saying who it is meant for and where the hook came from.</p>
+          <ul><li>You must type the exact command, for example <span class="mono">send fake-co.com, hook 1</span>.</li>
+            <li>Never twice. If the email service refuses it, nothing was sent and you can try again. If the answer is unclear, it locks so you can check your inbox first.</li></ul>
+          <p class="cost-line">A few seconds · 1 of 3 inbox sends a day (shared)</p></div>
+
+        <div class="card g-step"><div class="label">Afterwards</div><h3>What you do</h3>
+          <p>Read the draft in your inbox. If you want to use it, you send it yourself from your own email account, after your own checks.</p>
+          <ul><li>Every company keeps a record here: facts, checks, decision, contact, pain points, draft, status and next steps.</li>
+            <li>Reopen any company from Recent runs.</li></ul></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>How the decision is made</h2><div class="sub">Fixed rules. The AI only reports evidence; it never decides.</div></div>
+        <div class="tscroll"><table class="g-table">
+          <thead><tr><th>Check</th><th>YES when the site or a search shows…</th><th>NO when…</th><th>Otherwise</th></tr></thead>
+          <tbody>
+            <tr><td><b>Gate · B2B SaaS</b></td><td data-l="YES —">It sells software to businesses</td><td data-l="NO —">It clearly doesn't</td><td data-l="Otherwise —">Unknown</td></tr>
+            <tr><td><b>Q1 · Size</b></td><td data-l="YES —">A Series A, B or C round</td><td data-l="NO —">Series D or later, or a public company</td><td data-l="Otherwise —">Unknown (seed, "pre-Series B", "Series A+", or nothing)</td></tr>
+            <tr><td><b>Q2 · Audit prep</b></td><td data-l="YES —">A certification in progress, an open security / compliance job, or data-breach news</td><td data-l="NO —">It already holds <i>both</i> SOC 2 and ISO 27001</td><td data-l="Otherwise —">Unknown ("no certificates listed" is not a YES)</td></tr>
+            <tr><td><b>Q3 · Client pressure</b></td><td data-l="YES —">An Enterprise plan, security / infosec reviews, or a named customer (weak)</td><td data-l="NO —">Never NO (not seeing it is not proof)</td><td data-l="Otherwise —">Unknown</td></tr>
+          </tbody>
+        </table></div>
+        <div class="g-decisions">
+          <div><span class="badge b-go">Go</span> B2B SaaS and all three checks are YES.</div>
+          <div><span class="badge b-flag">Flag</span> Two of the three checks YES and one unknown, or all three YES while B2B SaaS is unknown. Needs your approval.</div>
+          <div><span class="badge b-nogo">No-Go</span> The gate or any check is NO, or two or more are unknown.</div>
+        </div>
+      </div>
+
+      <div class="g-grid">
+        <div class="card g-step"><h3>Safety rules</h3>
+          <ul>
+            <li><b>Never emails a company.</b> The only email goes to your own inbox.</li>
+            <li>Every fact, answer and hook shows its exact quote and a link to where it came from.</li>
+            <li>Negative news can qualify a company but is never used in an email.</li>
+            <li>Do-not-contact companies are always skipped.</li>
+            <li>No logins: everyone with the link sees the same runs, so keep the link private.</li>
+          </ul></div>
+        <div class="card g-step"><h3>TEST ONLY runs</h3>
+          <ul>
+            <li>Chosen before you scrape and locked to those companies.</li>
+            <li>Labelled everywhere, and "[TEST ONLY]" goes in front of the email subject.</li>
+            <li>Lets Hunter run even on a No-Go, so you can try the whole journey.</li>
+            <li>While your pain-point list and email wording are still DRAFT, they only work on TEST ONLY runs.</li>
+          </ul></div>
+        <div class="card g-step"><h3>Daily limits (India time, shared)</h3>
+          <ul>
+            <li>Hunter lookups: <b>2</b> a day.</li>
+            <li>AI steps (company pictures + drafts): <b>50</b> a day.</li>
+            <li>Sends to your inbox: <b>3</b> a day.</li>
+            <li>They reset at midnight IST. The sidebar shows what's left.</li>
+          </ul></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Reading the screen</h2></div>
+        <div class="legend">
+          <div><span class="badge b-go">Go</span><span class="badge b-flag">Flag</span><span class="badge b-nogo">No-Go</span> The decision.</div>
+          <div><span class="badge caps b-go">Yes</span><span class="badge caps b-nogo">No</span><span class="badge caps b-neutral">Unknown</span> One check's answer.</div>
+          <div><span class="badge caps b-test">Test only</span> A TEST ONLY run. <span class="badge caps b-info">Sample</span> Made-up sample data.</div>
+          <div><span class="badge caps b-flag">Low confidence</span> Hunter is less than 80% sure about the person.</div>
+          <div><span class="prog" style="display:inline-flex;width:120px;vertical-align:middle"><i class="done"></i><i class="done"></i><i class="current"></i><i></i><i></i><i></i><i></i></span>
+            Progress: filled = done, outlined = next, red = stopped, dashed = can't be reached.</div>
+          <div><i class="muted">“exact quote”</i> · <a class="mono" href="#how-it-works">site.com/page</a> Evidence: the words on the page, and where.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Questions</h2></div>
+        <div class="faq">
+          <details><summary>Why is a company No-Go when it looks like a good fit?</summary>
+            <p>Usually because its website doesn't say enough. If two or more checks are unknown, it's No-Go: missing means unknown, and nothing is guessed. Open step 2 to see which checks were unknown.</p></details>
+          <details><summary>Why did it say "No hook found"?</summary>
+            <p>Every suggested opening line failed a rule: not word for word, too short or long, about funding, negative news, or menu text. The rejected lines and reasons are listed in step 5. No hook means no email, on purpose.</p></details>
+          <details><summary>Can I approve a No-Go?</summary>
+            <p>No. Only a Flag can be approved. A TEST ONLY run lets Hunter run on a No-Go so you can test the rest of the journey, but those emails are labelled TEST ONLY.</p></details>
+          <details><summary>Why do I have to type the send command?</summary>
+            <p>So an email can never go out by an accidental click. Even then, it only goes to your own inbox.</p></details>
+          <details><summary>What leaves this tool, and to where?</summary>
+            <p><b>Company websites</b>: we only read their public pages. <b>Gemini</b> (AI): gets the saved page text. <b>Serper</b> (web search): gets a search like "[company] data breach". <b>Hunter</b>: gets the company's domain. <b>Resend</b>: gets the draft and delivers it to your own inbox only. <b>Neon</b> (database): keeps the runs; contacts are deleted after 30 days.</p></details>
+          <details><summary>How do I change the pain points or email wording?</summary>
+            <p>They live in two files, <span class="mono">docs/pain-points.md</span> and <span class="mono">docs/email-settings.md</span>. Edit them, change "Status: DRAFT" to "Status: APPROVED" when you're happy, and redeploy. They can't be edited from this page on purpose.</p></details>
+        </div>
+      </div>
+    </section>
+
     <section id="sec-new" class="card newrun" aria-label="New run">
       <div class="row">
         <input class="text" id="domains" type="text" spellcheck="false" autocomplete="off"
@@ -371,6 +575,7 @@
         <span>TEST ONLY is locked to these companies and adds “[TEST ONLY]” to the subject</span>
       </div>
       <div class="err hidden" id="newErr"></div>
+      <div class="hintline" id="sampleBar"></div>
     </section>
 
     <section id="sec-run" class="card hidden" aria-label="This run">
@@ -470,6 +675,7 @@ function link(u, text) {
 }
 function badge(text, cls, caps) { return el("span", { class: `badge ${cls || "b-neutral"}${caps ? " caps" : ""}` }, text); }
 function testBadge() { return badge("Test only", "b-test", true); }
+function sampleBadge() { return badge("Sample", "b-info", true); }
 function fmtTime(iso, short) {
   if (!iso) return "";
   try {
@@ -485,7 +691,7 @@ function evLine(e) {
     e.note ? el("span", { class: "faint" }, ` · ${e.note}`) : null);
 }
 function scrollToSec(id) {
-  const t = $(id); if (!t || t.classList.contains("hidden")) return;
+  const t = $(id); if (!t || t.classList.contains("hidden") || t.classList.contains("view-off")) return;
   window.scrollTo({ top: t.getBoundingClientRect().top + window.scrollY - 16, behavior: "smooth" });
   closeMenu();
 }
@@ -579,7 +785,7 @@ function renderSidebar() {
   if (!items.length) box.append(el("div", { class: "side-empty" }, "No companies yet"));
   items.forEach((it, i) => {
     const m = model(it);
-    box.append(el("button", { class: "co" + (i === sel ? " on" : ""), onclick: () => { sel = i; render(); scrollToSec("sec-work"); } },
+    box.append(el("button", { class: "co" + (i === sel ? " on" : ""), onclick: () => { sel = i; if (currentView !== "pipeline") showView("pipeline"); render(); scrollToSec("sec-work"); } },
       el("span", { class: "dot " + m.dot }), el("span", { class: "d" }, nameOf(it)), el("span", { class: "s" }, it.running ? "Working…" : m.next)));
   });
   renderMeters();
@@ -623,7 +829,8 @@ function decisionBadge(it) {
 
 function renderRun() {
   $("sec-run").classList.toggle("hidden", !items.length);
-  $("runTitle").textContent = `This run · ${items.length} compan${items.length === 1 ? "y" : "ies"}`;
+  $("runTitle").textContent = `${items.length && items[0].sample ? "Sample run" : "This run"} · ${items.length} compan${items.length === 1 ? "y" : "ies"}`;
+  renderSampleBar();
   $("download").disabled = scrapingNow || !items.some(it => it.r);
   const body = $("runBody");
   body.replaceChildren();
@@ -633,7 +840,7 @@ function renderRun() {
     body.append(el("tr", { class: "click" + (i === sel ? " sel" : ""), tabindex: "0", onclick: pick,
                            onkeydown: (e) => { if (e.key === "Enter") pick(); } },
       el("td", {}, el("div", { class: "cell-co" }, i === sel ? el("span", { class: "dot", style: { background: "var(--ink)" } }) : null,
-        el("span", { class: "dom" }, nameOf(it)), isTest(it) ? testBadge() : null)),
+        el("span", { class: "dom" }, nameOf(it)), isTest(it) ? testBadge() : null, it.sample ? sampleBadge() : null)),
       el("td", {}, websiteCell(it)),
       el("td", {}, decisionBadge(it)),
       el("td", {}, progress(m)),
@@ -652,7 +859,7 @@ function renderWorkspace() {
   const view = it.view ?? (m.cur ?? m.stop ?? (m.s.every(x => x.state === "done") ? 6 : 0));
 
   const rail = el("div", { class: "card rail" },
-    el("div", { class: "rail-head" }, el("span", { class: "dom" }, nameOf(it)), decisionBadge(it), isTest(it) ? testBadge() : null));
+    el("div", { class: "rail-head" }, el("span", { class: "dom" }, nameOf(it)), decisionBadge(it), isTest(it) ? testBadge() : null, it.sample ? sampleBadge() : null));
   const steps = el("div", { class: "steps" });
   STEPS.forEach((step, i) => {
     const x = m.s[i];
@@ -704,7 +911,10 @@ function renderPanel(it, m, i) {
   const camp = (it.st && it.st.campaign) || {};
   const busy = !!it.running;
   let act;
-  if (x.state === "running") {
+  if (it.sample && x.state === "current") {
+    act = el("div", { class: "act" }, el("span", { class: "pill" }, "Sample data — buttons are switched off"),
+      el("div", { class: "cost" }, "Nothing runs, nothing is saved, nothing is sent."));
+  } else if (x.state === "running") {
     act = el("div", { class: "act" }, el("button", { class: "btn", disabled: true }, el("span", { class: "spin" }), "Working…"));
   } else if (x.state === "current" && i === 2 && x.approval) {
     act = el("div", { class: "act" }, el("span", { class: "pill flag" }, "Needs your approval — read the evidence below"));
@@ -716,7 +926,7 @@ function renderPanel(it, m, i) {
       el("div", { class: "cost" }, costLine(step.key)));
   } else if (x.state === "done") {
     const kids = [el("span", { class: "pill done" }, "✓ Done")];
-    if (RERUN[step.key] && !camp.sent_at) kids.push(el("button", { class: "tert", onclick: () => { if (!it.running) runStep(it, step.key); } }, RERUN[step.key]));
+    if (RERUN[step.key] && !camp.sent_at && !it.sample) kids.push(el("button", { class: "tert", onclick: () => { if (!it.running) runStep(it, step.key); } }, RERUN[step.key]));
     const later = m.s.findIndex((y, j) => j > i && (y.state === "current" || y.state === "stopped"));
     if (later > 0) kids.push(el("button", { class: "btn sec small", onclick: () => { it.view = later; renderWorkspace(); } }, `Continue to ${STEPS[later].title} →`));
     act = el("div", { class: "act" }, ...kids);
@@ -826,7 +1036,8 @@ function bodyCheck(body, it, m) {
   body.append(el("div", { class: "decision " + (DEC_CLASS[k.decision] || "b-neutral") }, el("span", { class: "w" }, k.decision), el("span", {}, k.decision_reason)));
   if (k.decision === "Flag" && !camp.flag_approved) {
     body.append(el("div", { class: "approve" }, el("span", {}, "A Flag needs a human decision before Hunter can run. Read the evidence below first."),
-      el("button", { class: "btn", disabled: !!it.running, onclick: () => runStep(it, "approve") }, "I approve this Flag")));
+      el("button", { class: "btn", disabled: !!it.running || !!it.sample, onclick: () => runStep(it, "approve") },
+        it.sample ? "I approve this Flag (off for sample data)" : "I approve this Flag")));
   } else if (k.decision === "Flag") {
     body.append(el("div", { style: { color: "var(--go-ink)", fontSize: "13.5px" } }, "✓ Flag approved by a human."));
   }
@@ -961,7 +1172,7 @@ function bodySend(body, it, m) {
     it.sendInput = v;
     const ok = v.trim() === want;
     input.classList.toggle("ok", ok);
-    btn.disabled = !ok || !!it.running;
+    btn.disabled = !ok || !!it.running || !!it.sample;
     hint.className = ok ? "hintok" : "muted";
     hint.textContent = !v ? "Nothing typed yet" : ok ? "✓ Matches — ready to send" : want.startsWith(v) ? "Keep typing…" : "Doesn't match yet";
   };
@@ -978,6 +1189,7 @@ function bodySend(body, it, m) {
     picker, el("div", { class: "ev" }, el("i", {}, `“${hk.quote}”`)),
     el("div", { class: "label" }, "Type exactly"), el("div", { class: "cmd" }, want),
     input, hint, el("div", {}, btn),
+    it.sample ? el("div", { class: "faint", style: { fontSize: "12.5px" } }, "Sample data: you can try typing the command, but the button stays off and nothing is sent.") : null,
     e ? el("div", { class: "err" }, e.error) : null,
     (res.ok === false && !e) ? el("div", { class: "err" }, "Last try was refused (nothing was sent): " + res.error) : null,
     el("div", { class: "faint", style: { fontSize: "12px" } }, costLine("send")));
@@ -992,9 +1204,216 @@ function bodySend(body, it, m) {
   body.append(el("div", { class: "two" }, form, preview));
 }
 
+// ---------------------------------------------------------------- sample data (made up; nothing runs, nothing is saved)
+function sampleItems() {
+  const now = Date.now();
+  const iso = (minsAgo) => new Date(now - minsAgo * 60000).toISOString();
+  const page = (url, by, text) => ({ url, found_by: by, step: "A", chars: text.length, empty: false, text });
+  const fact = (field, value, url, quote) => ({ field, value, source_url: url, quote });
+  const ev = (url, quote, note, extra) => Object.assign({ source_url: url, quote, from: "page", usable_as_hook: true, note: note || "" }, extra || {});
+  const miss = (domain, type, path, result) => ({ url: `https://${domain}${path}`, type, step: "A", found_by: "common path", result });
+  const SIGN = "\n\n[Your name]\nGrowth, Sprinto";
+  const MID = "\n\nSprinto automates evidence collection and audit prep for SOC 2, ISO 27001 and similar frameworks, so teams stay audit-ready without the scramble.\n\nIs this on your plate this quarter? A one-line reply is plenty.";
+  const words = (t) => t.split(/\s+/).filter(Boolean).length;
+  function scrape(domain, test, pages, attempts, mins) {
+    const found = PAGE_TYPES.filter(t => pages[t]);
+    const all = {}; PAGE_TYPES.forEach(t => all[t] = pages[t] || null);
+    return { domain, status: "ok", test_only: test, seconds: 14 + found.length * 2, robots: "robots.txt read",
+             fetches: { step_a: 9, step_b: 2 }, found, missing: PAGE_TYPES.filter(t => !pages[t]), ran_out_of_time: false,
+             pages: all, attempts, log: [], saved: true, scrape_id: "sample-" + domain, saved_at: iso(mins) };
+  }
+
+  // 1 · fake-co.com — Go, draft ready to send
+  const F = "https://fake-co.com";
+  const f = scrape("fake-co.com", false, {
+    homepage: page(F + "/", "homepage", "Fake Co\nFake Co is a B2B SaaS platform for finance teams.\nTrusted by 300 finance teams across India and the Middle East.\nBook a demo"),
+    pricing: page(F + "/pricing", "common path", "Pricing\nStarter\nGrowth\nEnterprise plan with SSO and audit logs\nTalk to sales"),
+    about: page(F + "/about", "homepage link", "About us\nFake Co was founded in 2019.\nToday we are a team of 120 people in Bengaluru and Dubai."),
+    careers: page(F + "/careers", "common path", "Open roles\nSenior GRC Analyst\nBackend Engineer"),
+    press: page(F + "/press", "homepage link", "Press\nFake Co raises $20M Series B to expand in the Middle East."),
+  }, [miss("fake-co.com", "security", "/security", "HTTP 404")], 42);
+  const fBody = "Hi Pat,\n\nI was on Fake Co's website and this line stood out: \"Trusted by 300 finance teams across India and the Middle East.\"\n\nWhen I talk to security and compliance leads, two things come up a lot: carrying the compliance load while the team is still growing, and collecting audit evidence by hand." + MID + SIGN;
+  const fCamp = {
+    domain: "fake-co.com", decision: "Go", flag_approved: false, updated_at: iso(30), sent_at: null, send_result: null,
+    picture: { model: "gemini-2.5-flash", seconds: 24, rejected: [{ field: "funding_stage", quote: "We raised Series C", reason: "quote is not word for word on that page" }], facts: [
+      fact("company_name", "Fake Co", F + "/", "Fake Co is a B2B SaaS platform for finance teams."),
+      fact("what_they_do", "Software for finance teams", F + "/", "Fake Co is a B2B SaaS platform for finance teams."),
+      fact("b2b_saas", "yes", F + "/", "Fake Co is a B2B SaaS platform for finance teams."),
+      fact("funding_stage", "Series B", F + "/press", "Fake Co raises $20M Series B to expand in the Middle East."),
+      fact("team_size", "120 people", F + "/about", "Today we are a team of 120 people in Bengaluru and Dubai."),
+      fact("security_or_compliance_job", "Senior GRC Analyst", F + "/careers", "Senior GRC Analyst"),
+      fact("enterprise_plan", "Enterprise plan", F + "/pricing", "Enterprise plan with SSO and audit logs"),
+      fact("country_or_market", "India and the Middle East", F + "/", "Trusted by 300 finance teams across India and the Middle East."),
+    ] },
+    checks: { company_name: "Fake Co", decision: "Go", decision_reason: "All checks YES.", searches: [],
+      gate: { answer: "yes", why: "The site shows it is B2B SaaS.", evidence: [ev(F + "/", "Fake Co is a B2B SaaS platform for finance teams.")] },
+      q1: { answer: "yes", why: "Series B (A-C = YES).", evidence: [ev(F + "/press", "Fake Co raises $20M Series B to expand in the Middle East.", "Series B")] },
+      q2: { answer: "yes", why: "An open security / compliance job.", evidence: [ev(F + "/careers", "Senior GRC Analyst", "open job")] },
+      q3: { answer: "yes", why: "An Enterprise plan is quoted.", evidence: [ev(F + "/pricing", "Enterprise plan with SSO and audit logs", "enterprise plan")] } },
+    pain: { group: "S", group_name: "security / compliance", list_status: "DRAFT", why: "2 picked for the security / compliance group.", skipped: [], picked: [
+      { id: "S5", pain: "A small team carries the whole compliance load while also hiring or chasing a certification.", phrase: "carrying the compliance load while the team is still growing",
+        note: "backed by a quoted page fact", evidence: [{ kind: "compliance_job", source_url: F + "/careers", quote: "Senior GRC Analyst" }] },
+      { id: "S1", pain: "Audit evidence is collected by hand: screenshots, spreadsheets and chasing control owners.", phrase: "collecting audit evidence by hand",
+        note: "typical for the role; no company-specific evidence", evidence: [] }] },
+    email: { hooks: [
+        { n: 1, quote: "Trusted by 300 finance teams across India and the Middle East.", source_url: F + "/", topics: ["customers", "countries"] },
+        { n: 2, quote: "Enterprise plan with SSO and audit logs", source_url: F + "/pricing", topics: ["compliance", "enterprise"] }],
+      rejected_hooks: [
+        { quote: "Fake Co raises $20M Series B to expand in the Middle East.", source_url: F + "/press", reason: "funding words are banned as hooks" },
+        { quote: "Book a demo", source_url: F + "/", reason: "3 words (must be 4 to 30)" }],
+      subject: "Fake Co and audit readiness", body: fBody, words: words(fBody), hook_n: 1, hook_source: F + "/", chosen: 1,
+      test_only: false, wording_status: "DRAFT", pain_ids: ["S5", "S1"] },
+  };
+  const fContact = { outcome: "found", looked_up_at: iso(35), contact: { name: "Pat Lee", position: "Head of Information Security", email: "pat@fake-co.com",
+    confidence: 91, low_confidence: false, verification: "valid", rule: 1, rule_label: "security / CISO / compliance / GRC",
+    sources: ["https://fake-co.com/team"], people_returned: 6 } };
+
+  // 2 · acme-cloud.example — Go, delivered
+  const A = "https://acme-cloud.example";
+  const a = scrape("acme-cloud.example", false, {
+    homepage: page(A + "/", "homepage", "Acme Cloud\nAcme Cloud is a SaaS platform that helps businesses manage cloud costs.\nUsed by engineering teams at over 500 companies worldwide."),
+    pricing: page(A + "/pricing", "common path", "Free\nTeam\nEnterprise: custom pricing, security reviews and a dedicated manager"),
+    customers: page(A + "/customers", "homepage link", "Customers\nNorth Bank cut its cloud bill by 30% with Acme Cloud."),
+    press: page(A + "/news", "homepage link", "News\nAcme Cloud closes Series A funding."),
+  }, [miss("acme-cloud.example", "careers", "/careers", "redirected to the homepage (page does not exist)")], 180);
+  const aBody = "Hi Sam,\n\nI was on Acme Cloud's website and this line stood out: \"Used by engineering teams at over 500 companies worldwide.\"\n\nWhen I talk to engineering leaders, two things come up a lot: compliance work pulling engineers off the roadmap, and enterprise deals stalling on security reviews." + MID + SIGN;
+  const aCamp = {
+    domain: "acme-cloud.example", decision: "Go", flag_approved: false, updated_at: iso(150), sent_at: iso(150),
+    send_result: { ok: true, id: "sample", at: iso(150), hook: 1, to: "your own inbox", subject: "Acme Cloud and audit readiness", words: words(aBody) },
+    picture: { model: "gemini-2.5-flash", seconds: 21, rejected: [], facts: [
+      fact("company_name", "Acme Cloud", A + "/", "Acme Cloud is a SaaS platform that helps businesses manage cloud costs."),
+      fact("b2b_saas", "yes", A + "/", "Acme Cloud is a SaaS platform that helps businesses manage cloud costs."),
+      fact("funding_stage", "Series A", A + "/news", "Acme Cloud closes Series A funding."),
+      fact("security_review", "Security reviews offered", A + "/pricing", "Enterprise: custom pricing, security reviews and a dedicated manager"),
+      fact("named_customer", "North Bank", A + "/customers", "North Bank cut its cloud bill by 30% with Acme Cloud."),
+    ] },
+    checks: { company_name: "Acme Cloud", decision: "Go", decision_reason: "All checks YES.",
+      searches: [{ query: "Acme Cloud data breach", result: "found" }],
+      gate: { answer: "yes", why: "The site shows it is B2B SaaS.", evidence: [ev(A + "/", "Acme Cloud is a SaaS platform that helps businesses manage cloud costs.")] },
+      q1: { answer: "yes", why: "Series A (A-C = YES).", evidence: [ev(A + "/news", "Acme Cloud closes Series A funding.", "Series A")] },
+      q2: { answer: "yes", why: "Breach news was found (qualifies, never a hook).", evidence: [ev("https://news.example/acme-cloud", "Acme Cloud data breach exposed test accounts", "breach news", { from: "search", usable_as_hook: false })] },
+      q3: { answer: "yes", why: "Security reviews are mentioned.", evidence: [ev(A + "/pricing", "Enterprise: custom pricing, security reviews and a dedicated manager", "security review")] } },
+    pain: { group: "C", group_name: "CTO / engineering", list_status: "DRAFT", why: "2 picked for the CTO / engineering group.", skipped: [], picked: [
+      { id: "C1", pain: "Compliance work pulls engineers off the product roadmap.", phrase: "compliance work pulling engineers off the roadmap", note: "typical for the role; no company-specific evidence", evidence: [] },
+      { id: "C2", pain: "Enterprise deals stall on security reviews.", phrase: "enterprise deals stalling on security reviews", note: "typical for the role; no company-specific evidence", evidence: [] }] },
+    email: { hooks: [{ n: 1, quote: "Used by engineering teams at over 500 companies worldwide.", source_url: A + "/", topics: ["customers", "global"] }],
+      rejected_hooks: [{ quote: "Acme Cloud closes Series A funding.", source_url: A + "/news", reason: "funding words are banned as hooks" }],
+      subject: "Acme Cloud and audit readiness", body: aBody, words: words(aBody), hook_n: 1, hook_source: A + "/", chosen: 1,
+      test_only: false, wording_status: "DRAFT", pain_ids: ["C1", "C2"] },
+  };
+  const aContact = { outcome: "found", looked_up_at: iso(160), contact: { name: "Sam Rao", position: "Co-founder and CTO", email: "sam@acme-cloud.example",
+    confidence: 88, low_confidence: false, verification: "valid", rule: 2, rule_label: "CTO / head of engineering", sources: ["https://acme-cloud.example/about"], people_returned: 4 } };
+
+  // 3 · northwind-saas.example — Flag, waiting for approval
+  const N = "https://northwind-saas.example";
+  const n = scrape("northwind-saas.example", false, {
+    homepage: page(N + "/", "homepage", "Northwind\nNorthwind is a B2B SaaS tool for logistics teams.\nPlans for startups and enterprises."),
+    pricing: page(N + "/pricing", "common path", "Startup\nScale\nEnterprise plan with dedicated support"),
+    about: page(N + "/about", "homepage link", "About Northwind\nWe raised a Series A in 2024 to grow across Southeast Asia."),
+  }, [miss("northwind-saas.example", "careers", "/careers", "HTTP 404"), miss("northwind-saas.example", "security", "/security", "blocked by robots.txt")], 95);
+  const nCamp = {
+    domain: "northwind-saas.example", decision: "Flag", flag_approved: false, updated_at: iso(90), sent_at: null, send_result: null, pain: null, email: null,
+    picture: { model: "gemini-2.5-flash", seconds: 19, rejected: [], facts: [
+      fact("company_name", "Northwind", N + "/", "Northwind is a B2B SaaS tool for logistics teams."),
+      fact("b2b_saas", "yes", N + "/", "Northwind is a B2B SaaS tool for logistics teams."),
+      fact("funding_stage", "Series A", N + "/about", "We raised a Series A in 2024 to grow across Southeast Asia."),
+      fact("enterprise_plan", "Enterprise plan", N + "/pricing", "Enterprise plan with dedicated support"),
+    ] },
+    checks: { company_name: "Northwind", decision: "Flag", decision_reason: "Two checks YES, one unknown: needs a human decision.",
+      searches: [{ query: "Northwind data breach", result: "no results" }],
+      gate: { answer: "yes", why: "The site shows it is B2B SaaS.", evidence: [ev(N + "/", "Northwind is a B2B SaaS tool for logistics teams.")] },
+      q1: { answer: "yes", why: "Series A (A-C = YES).", evidence: [ev(N + "/about", "We raised a Series A in 2024 to grow across Southeast Asia.", "Series A")] },
+      q2: { answer: "unknown", why: "No certification in progress, no security job and no breach news found. (No certificates listed is not a YES.)", evidence: [] },
+      q3: { answer: "yes", why: "An Enterprise plan is quoted.", evidence: [ev(N + "/pricing", "Enterprise plan with dedicated support", "enterprise plan")] } },
+  };
+
+  // 4 · bigcorp-listed.example — No-Go
+  const B = "https://bigcorp-listed.example";
+  const b = scrape("bigcorp-listed.example", false, {
+    homepage: page(B + "/", "homepage", "BigCorp\nBigCorp is enterprise software for banks.\nBigCorp is listed on the NSE and BSE."),
+    security: page(B + "/trust", "homepage link", "Trust centre\nWe are SOC 2 Type II and ISO 27001 certified."),
+  }, [miss("bigcorp-listed.example", "pricing", "/pricing", "HTTP 404")], 240);
+  const bCamp = {
+    domain: "bigcorp-listed.example", decision: "No-Go", flag_approved: false, updated_at: iso(230), sent_at: null, send_result: null, pain: null, email: null,
+    picture: { model: "gemini-2.5-flash", seconds: 17, rejected: [], facts: [
+      fact("b2b_saas", "yes", B + "/", "BigCorp is enterprise software for banks."),
+      fact("funding_stage", "Publicly listed", B + "/", "BigCorp is listed on the NSE and BSE."),
+      fact("certification_held", "SOC 2 Type II and ISO 27001", B + "/trust", "We are SOC 2 Type II and ISO 27001 certified."),
+    ] },
+    checks: { company_name: "BigCorp", decision: "No-Go", decision_reason: "One of the checks is NO.",
+      searches: [{ query: null, result: "no searches: company already dropped" }],
+      gate: { answer: "yes", why: "The site shows it is B2B SaaS.", evidence: [ev(B + "/", "BigCorp is enterprise software for banks.")] },
+      q1: { answer: "no", why: "Publicly listed (D+ / public = NO).", evidence: [ev(B + "/", "BigCorp is listed on the NSE and BSE.", "public company")] },
+      q2: { answer: "no", why: "Already holds both SOC 2 and ISO 27001.", evidence: [ev(B + "/trust", "We are SOC 2 Type II and ISO 27001 certified.", "both held")] },
+      q3: { answer: "unknown", why: "No enterprise plan, security review or named customer quoted.", evidence: [] } },
+  };
+
+  // 5 · quiet-site.example — TEST ONLY, stopped: no hook found
+  const Q = "https://quiet-site.example";
+  const q = scrape("quiet-site.example", true, {
+    homepage: page(Q + "/", "homepage", "Quiet\nGet started\nBacked by leading investors\nLog in"),
+  }, [miss("quiet-site.example", "pricing", "/pricing", "empty (no readable text; maybe JavaScript-only)"),
+      miss("quiet-site.example", "about", "/about", "same text as the homepage (page does not really exist)")], 20);
+  const qCamp = {
+    domain: "quiet-site.example", decision: "No-Go", flag_approved: false, updated_at: iso(12), sent_at: null, send_result: null,
+    picture: { model: "gemini-2.5-flash", seconds: 9, rejected: [], facts: [] },
+    checks: { company_name: "Quiet", decision: "No-Go", decision_reason: "3 checks unknown (insufficient data).",
+      searches: [{ query: "Quiet funding round Series", result: "no results" }, { query: "Quiet data breach", result: "no results" }],
+      gate: { answer: "unknown", why: "No quote shows whether it sells software to businesses.", evidence: [] },
+      q1: { answer: "unknown", why: "No funding stage quoted.", evidence: [] },
+      q2: { answer: "unknown", why: "Nothing found.", evidence: [] },
+      q3: { answer: "unknown", why: "Nothing found.", evidence: [] } },
+    pain: { group: "F", group_name: "founder", list_status: "DRAFT", why: "2 picked for the founder group.", skipped: [], picked: [
+      { id: "F1", pain: "Enterprise customers ask for SOC 2 or ISO 27001 before they sign.", phrase: "enterprise customers asking for SOC 2 or ISO 27001 before signing", note: "typical for the role; no company-specific evidence", evidence: [] },
+      { id: "F3", pain: "Compliance costs (consultants, auditors, tools) are hard to predict.", phrase: "compliance costs that are hard to predict", note: "typical for the role; no company-specific evidence", evidence: [] }] },
+    email: { hooks: [], note: "no hook found: nothing passed the hook rules, so there is no email",
+      rejected_hooks: [
+        { quote: "Get started", source_url: Q + "/", reason: "2 words (must be 4 to 30)" },
+        { quote: "Backed by leading investors", source_url: Q + "/", reason: "funding words are banned as hooks" }],
+      test_only: true, wording_status: "DRAFT", pain_ids: ["F1", "F3"] },
+  };
+  const qContact = { outcome: "found", looked_up_at: iso(15), contact: { name: "Ann Roy", position: "Founder", email: "ann@quiet-site.example",
+    confidence: 68, low_confidence: true, verification: "accept_all", rule: 3, rule_label: "founder", sources: [], people_returned: 2 } };
+
+  const item = (r, next, status, steps, camp, contact) => ({ sample: true, input: r.domain, r, err: {},
+    st: { next, status, next_steps: steps, campaign: camp, contact: contact || null } });
+  return [
+    item(f, "send", "Email drafted, ready for review", ["Read the draft, then type: send fake-co.com, hook <number>"], fCamp, fContact),
+    item(a, "done", "Draft delivered to your inbox and logged", ["Read the draft in your inbox.", "If you want to use it, send it yourself from your own email."], aCamp, aContact),
+    item(n, "approve", "Flag: waiting for your approval", ["Read the evidence. Approve the Flag only if it looks right."], nCamp),
+    item(b, "contact", "No-Go", ["Stop here, unless this is a TEST ONLY run (only those let Hunter run on a No-Go)."], bCamp),
+    item(q, "done", "No hook found, so no email", ["Nothing on the company's own pages passed the hook rules. Stop here."], qCamp, qContact),
+  ];
+}
+
+function loadSample() {
+  items = sampleItems(); sel = 0; confirmId = null; sampleArmed = false;
+  showView("pipeline"); render(); renderRecent(); scrollToSec("sec-run");
+}
+function clearSample() { items = []; sel = 0; render(); renderRecent(); }
+let sampleArmed = false;
+function sampleButtonClick() {
+  if (items.length && !items[0].sample && !sampleArmed) {          // never silently replace a real run
+    sampleArmed = true; renderSampleBar();
+    setTimeout(() => { sampleArmed = false; renderSampleBar(); }, 5000);
+    return;
+  }
+  loadSample();
+}
+function renderSampleBar() {
+  const box = $("sampleBar");
+  const isSample = items.length && items[0].sample;
+  box.replaceChildren(...[
+    el("span", {}, "New here?"),
+    el("button", { class: "tert", onclick: sampleButtonClick, disabled: scrapingNow },
+      sampleArmed ? "Click again to replace this run with sample data" : isSample ? "Reload sample data" : "See it with sample data"),
+    isSample ? el("button", { class: "tert", onclick: clearSample }, "Clear sample data") : null,
+    el("button", { class: "tert", onclick: () => showView("guide") }, "How it works")].filter(Boolean));
+}
+
 // ---------------------------------------------------------------- run a step
 async function runStep(it, key, extra) {
-  if (it.running || !it.r || !it.r.scrape_id) return;
+  if (it.sample || it.running || !it.r || !it.r.scrape_id) return;      // sample data never runs anything
   it.running = key; it.started = Date.now();
   delete it.err[key]; if (key === "approve") delete it.err.check;
   it.view = KEY_INDEX[key];
@@ -1089,7 +1508,7 @@ $("go").addEventListener("click", async () => {
 });
 
 $("download").addEventListener("click", () => {
-  const data = items.filter(it => it.r).map(it => Object.assign({}, it.r, { contact: it.st && it.st.contact, campaign: it.st && it.st.campaign }));
+  const data = items.filter(it => it.r).map(it => Object.assign({}, it.r, { sample: !!it.sample, contact: it.st && it.st.contact, campaign: it.st && it.st.campaign }));
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const a = el("a", { href: URL.createObjectURL(blob), download: `prospectiq-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json` });
   document.body.append(a); a.click(); a.remove();
@@ -1153,26 +1572,51 @@ async function openRun(run) {
   if (d.error) { renderRecent(); showNewErr(d.error); return; }
   items = [{ r: d.scrape, st: { next: d.next, status: d.status, next_steps: d.next_steps, campaign: d.campaign, contact: d.contact }, err: {}, input: run.domain }];
   sel = 0;
+  if (currentView !== "pipeline") showView("pipeline");
   render(); renderRecent();
   scrollToSec("sec-work");
 }
 $("recentSearch").addEventListener("input", renderRecent);
 
+// ---------------------------------------------------------------- views: pipeline / how it works
+let currentView = "pipeline";
+const PIPELINE_IDS = ["sec-new", "sec-run", "sec-work", "sec-recent"];
+function showView(v) {
+  currentView = v;
+  $("sec-guide").classList.toggle("hidden", v !== "guide");
+  for (const id of PIPELINE_IDS) $(id).classList.toggle("view-off", v === "guide");
+  $("dbBanner").classList.toggle("view-off", v === "guide");
+  const want = v === "guide" ? "#how-it-works" : "";
+  if (location.hash !== want) history.replaceState(null, "", location.pathname + location.search + want);
+  window.scrollTo({ top: 0 });
+  closeMenu(); spy();
+}
+$("guideSample").addEventListener("click", loadSample);
+$("guideStart").addEventListener("click", () => { showView("pipeline"); $("domains").focus(); });
+window.addEventListener("hashchange", () => showView(location.hash === "#how-it-works" ? "guide" : "pipeline"));
+
 // ---------------------------------------------------------------- nav, scroll spy, washes fade, theme, menu
-document.querySelectorAll("#nav button").forEach(b => b.addEventListener("click", () => scrollToSec(b.dataset.sec)));
+document.querySelectorAll("#nav button[data-sec]").forEach(b => b.addEventListener("click", () => {
+  if (currentView !== "pipeline") showView("pipeline");
+  scrollToSec(b.dataset.sec);
+}));
+document.querySelector('#nav button[data-view="guide"]').addEventListener("click", () => showView("guide"));
 function spy() {
   let on = "sec-new";
   for (const id of ["sec-new", "sec-run", "sec-work", "sec-recent"]) {
     const n = $(id);
-    if (n && !n.classList.contains("hidden") && n.getBoundingClientRect().top < 140) on = id;
+    if (n && !n.classList.contains("hidden") && !n.classList.contains("view-off") && n.getBoundingClientRect().top < 140) on = id;
   }
   const fromBottom = document.documentElement.scrollHeight - (window.innerHeight + window.scrollY);
   if (fromBottom < 4 && window.scrollY > 0) on = "sec-recent";
-  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.sec === on));
-  $("washes").style.opacity = fromBottom < 180 ? `calc(var(--wash-opacity) * ${Math.max(0, fromBottom / 180).toFixed(2)})` : "";
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on",
+    currentView === "guide" ? b.dataset.view === "guide" : b.dataset.sec === on));
+  // where the bottom of the page is, measured from the top of the screen: the washes fade out over its last 180px
+  $("washes").style.setProperty("--fade-end", (window.innerHeight + fromBottom) + "px");
 }
 window.addEventListener("scroll", spy, { passive: true });
 window.addEventListener("resize", spy);
+try { new ResizeObserver(spy).observe(document.body); } catch (e) {}   // page height changes (new rows, steps)
 
 function currentTheme() {
   const t = document.documentElement.dataset.theme;
@@ -1201,6 +1645,7 @@ $("menuBtn").addEventListener("click", () => {
 paintThemeButtons();
 renderChips();
 render();
+if (location.hash === "#how-it-works") showView("guide");
 spy();
 loadUsage();
 loadRecent();
