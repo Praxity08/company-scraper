@@ -19,6 +19,16 @@ Step 1 of a cold-outreach research pipeline. It only collects text; it decides n
 at a time and shows what was found. Nothing is saved on the server; use "Download JSON" to keep results.
 There is no login: anyone with the link can use it.
 
+### Hunter contact + Neon storage
+- Every scrape is saved in Neon (project `company-scraper`) and listed under **Recent runs**.
+- Each scraped domain has a **Find contact** button: ONE Hunter lookup, at most one per scrape and
+  **2 per day for everyone** (India time). Role order: 1 security / CISO / compliance / GRC,
+  2 CTO / head of engineering, 3 founder. Confidence under 80 is flagged LOW CONFIDENCE.
+  Nobody is ever emailed. Saved contacts are deleted after 30 days.
+- Settings: `HUNTER_API_KEY` and `DATABASE_URL` (see `.env.example`). On Vercel they are project
+  Environment Variables; on the owner's Mac they live in the login Keychain, never in a file.
+- Tables: `schema.sql`. Database tests (`test_web.py`) use a throw-away `test_...` schema only.
+
 Local test: `.venv/bin/python tools/dev_server.py`, then open http://localhost:8780
 
 ## Command line
@@ -26,7 +36,7 @@ Local test: `.venv/bin/python tools/dev_server.py`, then open http://localhost:8
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python scraper.py example.com another.io   # or no arguments to read domains.txt
-.venv/bin/python -m unittest test_scraper -v          # offline checks, made-up data only
+.venv/bin/python -m unittest test_scraper test_web -v  # checks, made-up data only
 ```
 Results go to `output/scrape/<domain>.json` and `output/scrape/run_log.txt` (not committed).
 Domains already scraped are skipped unless the saved result was "unreadable".
